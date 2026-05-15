@@ -1,0 +1,122 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import {
+  calculateOrderTotal,
+  type ProxyProduct,
+} from "@/lib/pricing";
+import { createClient } from "@/utils/supabase/server";
+
+async function getAuthenticatedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return { error: "You must be signed in." as const, supabase: null, user: null };
+  }
+
+  return { error: null, supabase, user };
+}
+
+export async function placeOrder(input: {
+  proxyType: ProxyProduct;
+  quantity: number;
+}) {
+  const auth = await getAuthenticatedUser();
+  if (auth.error || !auth.supabase || !auth.user) {
+    return { error: auth.error ?? "Unauthorized" };
+  }
+
+  const quantity = Number(input.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return { error: "Enter a valid quantity greater than zero." };
+  }
+
+  const totalPrice = calculateOrderTotal(input.proxyType, quantity);
+
+  const { data: profile, error: profileError } = await auth.supabase
+    .from("profiles")
+    .select("balance")
+    .eq("id", auth.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return { error: "Could not load your profile balance." };
+  }
+
+  const currentBalance = Number(profile.balance ?? 0);
+  if (currentBalance < totalPrice) {
+    return {
+      error: `Insufficient balance. You need $${totalPrice.toFixed(2)} but have $${currentBalance.toFixed(2)}.`,
+    };
+  }
+
+  const newBalance = Math.round((currentBalance - totalPrice) * 100) / 100;
+
+  const { error: balanceError } = await auth.supabase
+    .from("profiles")
+    .update({ balance: newBalance })
+    .eq("id", auth.user.id);
+
+  if (balanceError) {
+    return { error: balanceError.message };
+  }
+
+  const { error: orderError } = await auth.supabase.from("orders").insert({
+    user_id: auth.user.id,
+    proxy_type: input.proxyType,
+    quantity,
+    total_price: totalPrice,
+    status: "pending",
+  });
+
+  if (orderError) {
+    await auth.supabase
+      .from("profiles")
+      .update({ balance: currentBalance })
+      .eq("id", auth.user.id);
+    return { error: orderError.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { success: true, newBalance };
+}
+
+export async function submitDepositRequest(input: {
+  amount: number;
+  txid: string;
+}) {
+  const auth = await getAuthenticatedUser();
+  if (auth.error || !auth.supabase || !auth.user) {
+    return { error: auth.error ?? "Unauthorized" };
+  }
+
+  const amount = Number(input.amount);
+  const txid = input.txid.trim();
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { error: "Enter a valid deposit amount." };
+  }
+
+  if (txid.length < 6) {
+    return { error: "Enter a valid transaction ID (TXID)." };
+  }
+
+  const { error } = await auth.supabase.from("deposits").insert({
+    user_id: auth.user.id,
+    amount,
+    txid,
+    status: "pending",
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
