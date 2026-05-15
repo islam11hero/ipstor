@@ -9,6 +9,8 @@ import { isAdminEmail } from "@/lib/admin";
 import type { DashboardData, UserDeposit, UserProxy } from "@/lib/types/dashboard";
 import { createClient } from "@/utils/supabase/server";
 
+/** Data is fetched here (SSR); interactive UI including Add Funds → `/api/payment` is in `DashboardClient`. */
+
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {

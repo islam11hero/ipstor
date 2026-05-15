@@ -12,16 +12,16 @@ import {
   Globe,
   HardDrive,
   Loader2,
-  QrCode,
   Server,
   Shield,
   ShoppingCart,
   Wallet,
   Wifi,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { placeOrder, submitDepositRequest } from "@/app/dashboard/actions";
+import { placeOrder } from "@/app/dashboard/actions";
 import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,6 @@ import {
   calculateOrderTotal,
   DATACENTER_PRICE_PER_IP,
   RESIDENTIAL_PRICE_PER_GB,
-  USDT_TRC20_ADDRESS,
   type ProxyProduct,
 } from "@/lib/pricing";
 import { formatProxyLine, formatProxyList } from "@/lib/proxy-format";
@@ -105,7 +104,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const [proxyType, setProxyType] = useState<ProxyProduct>("datacenter");
   const [quantity, setQuantity] = useState("10");
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositTxid, setDepositTxid] = useState("");
+  const [cryptoPayLoading, setCryptoPayLoading] = useState(false);
 
   const parsedQuantity = Number(quantity) || 0;
   const orderTotal = useMemo(
@@ -142,26 +141,41 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     });
   }
 
-  function handleDepositSubmit(e: React.FormEvent) {
+  async function handleCryptoPay(e: React.FormEvent) {
     e.preventDefault();
-    startTransition(async () => {
-      const result = await submitDepositRequest({
-        amount: Number(depositAmount),
-        txid: depositTxid,
+    const amount = Number(depositAmount);
+    if (!Number.isFinite(amount) || amount < 1) {
+      toast.error("Enter a valid amount of at least $1.");
+      return;
+    }
+
+    setCryptoPayLoading(true);
+    try {
+      const res = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ amount }),
       });
 
-      if (result.error) {
-        toast.error(result.error);
+      const data = (await res.json()) as { invoice_url?: string; error?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not start payment.");
         return;
       }
 
-      toast.success(
-        "Deposit request submitted. Balance updates after admin approval."
-      );
-      setDepositAmount("");
-      setDepositTxid("");
-      refresh();
-    });
+      if (typeof data.invoice_url === "string" && data.invoice_url.startsWith("http")) {
+        window.location.href = data.invoice_url;
+        return;
+      }
+
+      toast.error("Invalid response from payment server.");
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setCryptoPayLoading(false);
+    }
   }
 
   function handleCopyAllProxies() {
@@ -636,99 +650,72 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </TabsContent>
 
           <TabsContent value="funds">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="border-white/10 bg-zinc-900/50">
+            <motion.div
+              initial={fadeInUp.initial}
+              animate={fadeInUp.animate}
+              transition={defaultTransition}
+              className="mx-auto max-w-lg"
+            >
+              <Card
+                className={cn(
+                  glassCard,
+                  "overflow-hidden border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-zinc-900/60 to-cyan-500/10 shadow-[0_0_48px_-12px_rgba(16,185,129,0.25)]"
+                )}
+              >
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <QrCode className="size-5 text-cyan-400" />
-                    Crypto checkout
+                  <CardTitle className="font-heading flex items-center gap-2 text-xl">
+                    <Zap className="size-6 text-emerald-400" />
+                    💳 Add funds
                   </CardTitle>
                   <CardDescription className="text-zinc-400">
-                    Send USDT (TRC20) to the address below, then submit your TXID.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col items-center rounded-xl border border-white/10 bg-zinc-950/80 p-8">
-                    <div className="flex size-40 items-center justify-center rounded-2xl border border-cyan-500/20 bg-cyan-500/5">
-                      <QrCode className="size-24 text-cyan-400/60" strokeWidth={1} />
-                    </div>
-                    <p className="mt-4 text-xs font-medium tracking-wider text-zinc-500 uppercase">
-                      USDT · TRC20
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Deposit address</Label>
-                    <div className="flex gap-2">
-                      <div className="flex-1 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 font-mono text-xs break-all text-cyan-100">
-                        {USDT_TRC20_ADDRESS}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0 border-white/10"
-                        onClick={() =>
-                          void copyText(USDT_TRC20_ADDRESS, "Address")
-                        }
-                      >
-                        <Copy className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-white/10 bg-zinc-900/50">
-                <CardHeader>
-                  <CardTitle>Submit deposit</CardTitle>
-                  <CardDescription className="text-zinc-400">
-                    We manually verify crypto payments and credit your balance.
+                    Pay with crypto via NOWPayments. Your balance updates automatically
+                    when the payment completes. 🛡️
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleDepositSubmit} className="space-y-4">
+                  <form onSubmit={handleCryptoPay} className="space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="deposit-amount">Amount (USD)</Label>
+                      <Label htmlFor="crypto-amount">Amount (USD)</Label>
                       <Input
-                        id="deposit-amount"
+                        id="crypto-amount"
                         type="number"
                         min={1}
                         step={0.01}
-                        placeholder="100.00"
+                        placeholder="50.00"
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         required
-                        className="border-white/10 bg-zinc-950"
+                        disabled={cryptoPayLoading}
+                        className="border-white/10 bg-zinc-950/80 text-lg font-medium"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="deposit-txid">Transaction ID (TXID)</Label>
-                      <Input
-                        id="deposit-txid"
-                        placeholder="Paste your blockchain TXID"
-                        value={depositTxid}
-                        onChange={(e) => setDepositTxid(e.target.value)}
-                        required
-                        className="border-white/10 bg-zinc-950 font-mono text-sm"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full bg-emerald-500 text-black hover:bg-emerald-400"
-                      disabled={isPending}
-                    >
-                      {isPending ? (
-                        <>
-                          <Loader2 className="animate-spin" />
-                          Submitting…
-                        </>
-                      ) : (
-                        "Submit deposit request"
-                      )}
-                    </Button>
+                    <motion.div {...hoverLift} {...tapScale}>
+                      <Button
+                        type="submit"
+                        disabled={cryptoPayLoading}
+                        className="w-full gap-2 bg-gradient-to-r from-emerald-400 to-cyan-400 py-6 text-base font-semibold text-black shadow-lg shadow-emerald-500/20 hover:from-emerald-300 hover:to-cyan-300"
+                      >
+                        {cryptoPayLoading ? (
+                          <>
+                            <Loader2 className="size-5 animate-spin" />
+                            Opening checkout…
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="size-5" />
+                            Pay with Crypto ⚡
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+                    <p className="text-center text-xs text-zinc-500">
+                      You will be redirected to NOWPayments to choose your coin and
+                      complete the transfer. 💎
+                    </p>
                   </form>
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
           </TabsContent>
         </Tabs>
       </main>

@@ -85,38 +85,3 @@ export async function placeOrder(input: {
   revalidatePath("/dashboard");
   return { success: true, newBalance };
 }
-
-export async function submitDepositRequest(input: {
-  amount: number;
-  txid: string;
-}) {
-  const auth = await getAuthenticatedUser();
-  if (auth.error || !auth.supabase || !auth.user) {
-    return { error: auth.error ?? "Unauthorized" };
-  }
-
-  const amount = Number(input.amount);
-  const txid = input.txid.trim();
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { error: "Enter a valid deposit amount." };
-  }
-
-  if (txid.length < 6) {
-    return { error: "Enter a valid transaction ID (TXID)." };
-  }
-
-  const { error } = await auth.supabase.from("deposits").insert({
-    user_id: auth.user.id,
-    amount,
-    txid,
-    status: "pending",
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  revalidatePath("/dashboard");
-  return { success: true };
-}

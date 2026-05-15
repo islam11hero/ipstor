@@ -13,6 +13,3 @@ export function calculateOrderTotal(
       : RESIDENTIAL_PRICE_PER_GB;
   return Math.round(unit * quantity * 100) / 100;
 }
-
-export const USDT_TRC20_ADDRESS =
-  "TXk9mP2vQnR8wL4hY6jF3sD1cB0aZ7eU5xN2mK8pR4qW";
