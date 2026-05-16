@@ -1,19 +1,28 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
+
+import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 
 const ERROR_MESSAGES: Record<string, string> = {
   admin_access_denied:
     "Access denied. You do not have permission to view the admin panel.",
 };
 
-export function FlashToast() {
+function FlashToastInner() {
+  const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return;
+
     const error = searchParams.get("error");
     if (!error) return;
 
@@ -24,7 +33,15 @@ export function FlashToast() {
     const url = new URL(window.location.href);
     url.searchParams.delete("error");
     router.replace(url.pathname + url.search, { scroll: false });
-  }, [searchParams, router]);
+  }, [mounted, searchParams, router]);
 
   return null;
+}
+
+export function FlashToast() {
+  return (
+    <Suspense fallback={<SearchParamsSuspenseFallback />}>
+      <FlashToastInner />
+    </Suspense>
+  );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
+import { ReferralTracker } from "@/components/ReferralTracker";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -67,6 +68,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[#050505] font-sans text-zinc-100 selection:bg-emerald-500/25 selection:text-emerald-50">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <TooltipProvider>
+            <ReferralTracker />
             {children}
             <Footer />
             <Toaster richColors position="top-right" />

@@ -2,22 +2,15 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useState, useTransition } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Suspense, useCallback, useMemo, useState, useTransition } from "react";
 import {
   Banknote,
   ClipboardList,
   LayoutDashboard,
   Loader2,
+  Mail,
   MoreHorizontal,
+  Rocket,
   Shield,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,9 +41,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 import { hoverLift, tapScale } from "@/lib/motion";
 import type { PendingDeposit, PendingOrder } from "@/lib/types/admin";
 import { cn } from "@/lib/utils";
+
+type RecentDepositTableRow = {
+  key: string;
+  user: string;
+  amount: number;
+  txHash: string;
+  status: string;
+};
 
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
@@ -79,13 +81,45 @@ type AdminPanelProps = {
   activeUserCount: number;
 };
 
-const DEMO_MRR_USD = 142_500;
+const DEMO_TOTAL_REVENUE_USD = 248_900;
 
-const REVENUE_30D = Array.from({ length: 30 }, (_, i) => {
-  const day = i + 1;
-  const base = 4200 + (i % 7) * 380 + (i % 5) * 210;
-  return { day: `${day}`, revenue: Math.round(base + (i % 4) * 900) };
-});
+const MOCK_RECENT_DEPOSITS: {
+  user: string;
+  amount: number;
+  txHash: string;
+  status: string;
+}[] = [
+  {
+    user: "ops@meridian.io",
+    amount: 2500,
+    txHash: "0x7f3a…c91e (USDT-TRC20)",
+    status: "Confirmed",
+  },
+  {
+    user: "growth@northbeam.digital",
+    amount: 890,
+    txHash: "bc1q…9f2a (BTC)",
+    status: "Confirming (2/6)",
+  },
+  {
+    user: "security@signalfoundry.co",
+    amount: 420,
+    txHash: "0x9d2e…41ab (USDT-ERC20)",
+    status: "Confirmed",
+  },
+  {
+    user: "data@acme.example",
+    amount: 120,
+    txHash: "LTC…m8q3",
+    status: "Confirmed",
+  },
+  {
+    user: "finance@ipnova.partner",
+    amount: 5000,
+    txHash: "0x4b1c…e902 (USDT-TRC20)",
+    status: "Manual review",
+  },
+];
 
 const viewMotion = {
   initial: { opacity: 0, x: 14 },
@@ -128,7 +162,7 @@ function shortId(id: string) {
 async function copyText(text: string, label: string) {
   try {
     await navigator.clipboard.writeText(text);
-    toast.success(`${label} copied`);
+    toast.success(`${label} copied to clipboard`);
   } catch {
     toast.error("Copy failed");
   }
@@ -165,7 +199,7 @@ const SIDEBAR: { id: AdminView; label: string; badge?: number }[] = [
   { id: "deposits", label: "Deposits" },
 ];
 
-export function AdminPanel({
+function AdminPanelInner({
   deposits,
   orders,
   activeUserCount,
@@ -191,6 +225,38 @@ export function AdminPanel({
   const [port, setPort] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const [provisionEmail, setProvisionEmail] = useState("");
+  const [provisionPaste, setProvisionPaste] = useState("");
+  const [provisionType, setProvisionType] = useState<
+    "datacenter" | "residential" | "mobile"
+  >("datacenter");
+
+  const recentDepositRows = useMemo<RecentDepositTableRow[]>(() => {
+    const fromDb = deposits.map((d) => ({
+      key: d.id,
+      user: d.user_email ?? shortId(d.user_id),
+      amount: d.amount,
+      txHash: d.txid,
+      status: "Pending review",
+    }));
+    const demo = MOCK_RECENT_DEPOSITS.map((r, i) => ({
+      key: `mock-${i}`,
+      user: r.user,
+      amount: r.amount,
+      txHash: r.txHash,
+      status: r.status,
+    }));
+    return [...fromDb, ...demo].slice(0, 8);
+  }, [deposits]);
+
+  function handleDeployProvision(e: React.FormEvent) {
+    e.preventDefault();
+    toast.success(
+      "Provision staged — wholesale lines queued for manual sync to the user workspace."
+    );
+    setProvisionPaste("");
+  }
 
   function refresh() {
     router.refresh();
@@ -253,10 +319,10 @@ export function AdminPanel({
           </div>
           <div>
             <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-              Command Center
+              IP Nova Command Center
             </h1>
             <p className="text-sm text-zinc-500">
-              Revenue signals, treasury, and fulfillment in one surface.
+              Treasury, fulfillment, and wholesale ingress—one secure surface.
             </p>
           </div>
         </div>
@@ -317,7 +383,7 @@ export function AdminPanel({
             >
               {view === "dashboard" && (
                 <motion.div
-                  className="space-y-6"
+                  className="space-y-8"
                   variants={bentoContainer}
                   initial="hidden"
                   animate="show"
@@ -327,9 +393,9 @@ export function AdminPanel({
                     className="grid gap-4 sm:grid-cols-3"
                   >
                     <MetricTile
-                      label="Total MRR"
-                      value={formatCurrency(DEMO_MRR_USD)}
-                      hint="Illustrative aggregate"
+                      label="Total revenue"
+                      value={formatCurrency(DEMO_TOTAL_REVENUE_USD)}
+                      hint="Bookings + proxy SKUs (illustrative)"
                     />
                     <MetricTile
                       label="Active users"
@@ -344,93 +410,146 @@ export function AdminPanel({
                   </motion.div>
 
                   <motion.div variants={bentoItem}>
-                    <div className={cn(shellGlass, "p-5 sm:p-6")}>
-                      <div className="mb-4">
-                        <h2 className="font-heading text-lg font-semibold text-white">
-                          30-day revenue
-                        </h2>
-                        <p className="text-xs text-zinc-500">
-                          Synthetic series for executive reporting (not wired to
-                          billing).
-                        </p>
+                    <div className={cn(shellGlass, "p-6 sm:p-8")}>
+                      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h2 className="font-heading text-xl font-semibold text-white">
+                            Provision proxies
+                          </h2>
+                          <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+                            Paste wholesale lines (Vultr, ISP partners) in raw{" "}
+                            <span className="font-mono text-zinc-400">IP:PORT:USER:PASS</span>{" "}
+                            format. Deployment is manual—this control stages credentials
+                            for operator review.
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                          <Shield className="size-3.5" aria-hidden />
+                          Admin only
+                        </span>
                       </div>
-                      <div className="h-[280px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={REVENUE_30D}
-                            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                      <form onSubmit={handleDeployProvision} className="space-y-5">
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="provision-email"
+                            className="flex items-center gap-2 text-zinc-300"
                           >
-                            <defs>
-                              <linearGradient
-                                id="revBar"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                              >
-                                <stop offset="0%" stopColor="#34d399" stopOpacity={0.95} />
-                                <stop offset="100%" stopColor="#0d9488" stopOpacity={0.35} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid
-                              strokeDasharray="4 8"
-                              stroke="rgba(255,255,255,0.06)"
-                              vertical={false}
-                            />
-                            <XAxis
-                              dataKey="day"
-                              tick={{ fill: "#71717a", fontSize: 9 }}
-                              axisLine={false}
-                              tickLine={false}
-                              interval={4}
-                            />
-                            <YAxis
-                              tick={{ fill: "#71717a", fontSize: 10 }}
-                              axisLine={false}
-                              tickLine={false}
-                              width={44}
-                              tickFormatter={(v) =>
-                                v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)
-                              }
-                            />
-                            <Tooltip
-                              cursor={{ fill: "rgba(255,255,255,0.03)" }}
-                              contentStyle={{
-                                background: "rgba(9,9,11,0.94)",
-                                border: "1px solid rgba(255,255,255,0.08)",
-                                borderRadius: 12,
-                                fontSize: 12,
-                              }}
-                              formatter={(v) => [
-                                formatCurrency(Number(v)),
-                                "Revenue",
-                              ]}
-                            />
-                            <Bar
-                              dataKey="revenue"
-                              fill="url(#revBar)"
-                              radius={[4, 4, 0, 0]}
-                              maxBarSize={18}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
+                            <Mail className="size-3.5 text-zinc-500" aria-hidden />
+                            User email
+                          </Label>
+                          <Input
+                            id="provision-email"
+                            type="email"
+                            autoComplete="off"
+                            placeholder="customer@company.com"
+                            value={provisionEmail}
+                            onChange={(e) => setProvisionEmail(e.target.value)}
+                            className="border-white/10 bg-black/50 font-mono text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="provision-paste" className="text-zinc-300">
+                            Raw proxy list
+                          </Label>
+                          <textarea
+                            id="provision-paste"
+                            rows={8}
+                            value={provisionPaste}
+                            onChange={(e) => setProvisionPaste(e.target.value)}
+                            placeholder={
+                              "203.0.113.42:8800:user_a:pass_a\n203.0.113.43:8800:user_b:pass_b"
+                            }
+                            className={cn(
+                              "w-full resize-y rounded-xl border border-white/10 bg-black/50 px-4 py-3 font-mono text-sm text-zinc-200 outline-none",
+                              "placeholder:text-zinc-600 focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+                            )}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="provision-type" className="text-zinc-300">
+                            Proxy type
+                          </Label>
+                          <select
+                            id="provision-type"
+                            value={provisionType}
+                            onChange={(e) =>
+                              setProvisionType(
+                                e.target.value as typeof provisionType
+                              )
+                            }
+                            className="h-11 w-full max-w-md rounded-xl border border-white/10 bg-black/50 px-3 text-sm text-zinc-200 outline-none focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+                          >
+                            <option value="datacenter">Datacenter</option>
+                            <option value="residential">Residential</option>
+                            <option value="mobile">Mobile</option>
+                          </select>
+                        </div>
+                        <Button
+                          type="submit"
+                          size="lg"
+                          className="w-full gap-2 bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 py-7 text-base font-semibold text-black shadow-[0_0_48px_-8px_rgba(52,211,153,0.55)] hover:from-emerald-300 hover:via-cyan-300 hover:to-emerald-300 sm:w-auto sm:min-w-[240px]"
+                        >
+                          <Rocket className="size-5" aria-hidden />
+                          Deploy to user
+                        </Button>
+                      </form>
                     </div>
                   </motion.div>
 
-                  <motion.div variants={bentoItem} className="grid gap-4 lg:grid-cols-2">
-                    <SnapshotCard
-                      title="Orders pipeline"
-                      value={orders.length}
-                      statusLabel={orders.length ? "Action needed" : "Clear"}
-                      tone={orders.length ? "warn" : "success"}
-                    />
-                    <SnapshotCard
-                      title="Treasury queue"
-                      value={deposits.length}
-                      statusLabel={deposits.length ? "Awaiting approval" : "Clear"}
-                      tone={deposits.length ? "warn" : "success"}
-                    />
+                  <motion.div variants={bentoItem}>
+                    <div className={cn(shellGlass, "overflow-hidden")}>
+                      <div className="border-b border-white/[0.06] px-6 py-4">
+                        <h2 className="font-heading text-lg font-semibold text-white">
+                          Recent deposits
+                        </h2>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Treasury movements across networks (includes demo rows for UI
+                          validation).
+                        </p>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-white/[0.08] hover:bg-transparent">
+                            <TableHead className="text-zinc-400">User</TableHead>
+                            <TableHead className="text-zinc-400">Amount</TableHead>
+                            <TableHead className="text-zinc-400">Crypto TX hash</TableHead>
+                            <TableHead className="text-right text-zinc-400">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {recentDepositRows.map((row) => (
+                            <TableRow
+                              key={row.key}
+                              className="border-white/[0.05] hover:bg-white/[0.02]"
+                            >
+                              <TableCell className="font-medium text-zinc-100">
+                                {row.user}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm text-emerald-200/90">
+                                {formatCurrency(row.amount)}
+                              </TableCell>
+                              <TableCell className="max-w-[220px] truncate font-mono text-xs text-zinc-400 sm:max-w-none">
+                                {row.txHash}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <StatusBadge
+                                  tone={
+                                    row.status.includes("Pending") ||
+                                    row.status.includes("review")
+                                      ? "warn"
+                                      : row.status.includes("Confirming")
+                                        ? "warn"
+                                        : "success"
+                                  }
+                                >
+                                  {row.status}
+                                </StatusBadge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </motion.div>
                 </motion.div>
               )}
@@ -707,6 +826,14 @@ export function AdminPanel({
   );
 }
 
+export function AdminPanel(props: AdminPanelProps) {
+  return (
+    <Suspense fallback={<SearchParamsSuspenseFallback />}>
+      <AdminPanelInner {...props} />
+    </Suspense>
+  );
+}
+
 function MetricTile({
   label,
   value,
@@ -726,32 +853,6 @@ function MetricTile({
           {value}
         </p>
         <p className="mt-2 text-xs text-zinc-500">{hint}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-function SnapshotCard({
-  title,
-  value,
-  statusLabel,
-  tone,
-}: {
-  title: string;
-  value: number;
-  statusLabel: string;
-  tone: "success" | "warn";
-}) {
-  return (
-    <motion.div variants={bentoItem} {...hoverLift}>
-      <div className={cn(shellGlass, "flex items-center justify-between p-5")}>
-        <div>
-          <p className="text-xs font-medium text-zinc-500">{title}</p>
-          <p className="mt-1 font-heading text-3xl font-bold text-white">{value}</p>
-        </div>
-        <StatusBadge tone={tone === "success" ? "success" : "warn"}>
-          {statusLabel}
-        </StatusBadge>
       </div>
     </motion.div>
   );

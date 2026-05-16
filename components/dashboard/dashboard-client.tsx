@@ -3,39 +3,54 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useMemo, useState, useTransition } from "react";
 import {
-  Activity,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import {
+  BookMarked,
+  BookOpen,
   Braces,
+  Building2,
   Check,
+  CheckCircle2,
   Copy,
   Download,
   Eye,
   EyeOff,
+  Flame,
   Globe,
+  Globe2,
   HardDrive,
   LayoutDashboard,
   Loader2,
+  Lock,
+  Menu,
+  MessageCircle,
+  Monitor,
+  Music,
   Network,
+  RefreshCw,
+  Send,
   Server,
   Shield,
   ShoppingCart,
+  Smartphone,
+  TrendingUp,
   Wallet,
   Wifi,
+  X,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import { placeOrder } from "@/app/dashboard/actions";
+import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,6 +92,7 @@ import {
   type ProxyProduct,
 } from "@/lib/pricing";
 import { formatProxyLine, formatProxyList } from "@/lib/proxy-format";
+import { SITE_URL } from "@/lib/site-url";
 import type { DashboardData, UserProxy } from "@/lib/types/dashboard";
 import { cn } from "@/lib/utils";
 
@@ -89,7 +105,8 @@ type DashboardView =
   | "proxies"
   | "buy"
   | "funds"
-  | "developer";
+  | "developer"
+  | "affiliate";
 
 const VIEW_PARAM = "view";
 
@@ -97,12 +114,30 @@ const VIEW_ALIASES: Record<string, DashboardView> = {
   overview: "overview",
   proxies: "proxies",
   "my-proxies": "proxies",
+  "proxy-list": "proxies",
+  datacenter: "proxies",
+  residential: "proxies",
   buy: "buy",
   "buy-proxies": "buy",
   funds: "funds",
+  billing: "funds",
+  "top-up": "funds",
   "add-funds": "funds",
   developer: "developer",
   "developer-api": "developer",
+  affiliate: "affiliate",
+  affiliates: "affiliate",
+  "affiliate-program": "affiliate",
+};
+
+/** Canonical `?view=` slug for each internal view (dense sidebar URLs). */
+const VIEW_QUERY_SLUG: Record<DashboardView, string> = {
+  overview: "overview",
+  proxies: "my-proxies",
+  buy: "buy-proxies",
+  funds: "billing",
+  developer: "developer-api",
+  affiliate: "affiliate",
 };
 
 function parseDashboardViewParam(raw: string | null): DashboardView {
@@ -111,20 +146,35 @@ function parseDashboardViewParam(raw: string | null): DashboardView {
   return VIEW_ALIASES[key] ?? "overview";
 }
 
+const SETUP_GUIDE_ITEMS: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}[] = [
+  { icon: Globe2, label: "Google Chrome" },
+  { icon: Flame, label: "Mozilla Firefox" },
+  { icon: Send, label: "Telegram" },
+  { icon: MessageCircle, label: "WhatsApp" },
+  { icon: Music, label: "TikTok" },
+  { icon: Smartphone, label: "Android" },
+  { icon: Monitor, label: "Windows" },
+  { icon: Shield, label: "GoLogin" },
+];
+
+const SKILL_INSTALL_CMD = "npx skills add ipnova/proxy-manager";
+const SKILL_PROMPT_SNIPPET =
+  "Using the IP Nova skill, pull the top 20 Google SERPs from the US, UK, Germany...";
+
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
 
-const BANDWIDTH_DEMO = [
-  { day: "Mon", gb: 42 },
-  { day: "Tue", gb: 58 },
-  { day: "Wed", gb: 51 },
-  { day: "Thu", gb: 74 },
-  { day: "Fri", gb: 69 },
-  { day: "Sat", gb: 88 },
-  { day: "Sun", gb: 76 },
-];
-
 const MOCK_API_KEY = "pn_live_sk_7x9K2mP4vQ8wZ1nL5bH3cF6jD0sA2eR8uY1";
+
+const AFFILIATE_DEMO_ROWS = [
+  { at: "2026-05-14T18:22:00.000Z", masked: "usr_***a3f", commission: 42.5 },
+  { at: "2026-05-12T09:10:00.000Z", masked: "usr_***91c", commission: 18.0 },
+  { at: "2026-05-09T14:45:00.000Z", masked: "usr_***7de", commission: 64.25 },
+  { at: "2026-05-02T11:02:00.000Z", masked: "usr_***502", commission: 12.0 },
+] as const;
 
 const viewTransition = {
   initial: { opacity: 0, x: 16 },
@@ -167,46 +217,18 @@ function formatDate(iso: string) {
   });
 }
 
-async function copyText(text: string, label: string) {
+async function clipboardWriteWithToast(
+  text: string,
+  label: string
+): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
+    return true;
   } catch {
     toast.error("Failed to copy. Please copy manually.");
+    return false;
   }
-}
-
-function pingMsForProxy(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i) * (i + 1)) % 97;
-  return 18 + (h % 45);
-}
-
-function proxiesToJson(proxies: UserProxy[]): string {
-  return JSON.stringify(
-    proxies.map((p) => ({
-      ip: p.ip_address,
-      port: p.port,
-      username: p.username,
-      password: p.password,
-    })),
-    null,
-    2
-  );
-}
-
-function proxiesToCsv(proxies: UserProxy[]): string {
-  const header = "ip,port,username,password";
-  const rows = proxies.map(
-    (p) =>
-      `${p.ip_address},${p.port},${escapeCsv(p.username)},${escapeCsv(p.password)}`
-  );
-  return [header, ...rows].join("\n");
-}
-
-function escapeCsv(value: string) {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
 }
 
 function downloadBlob(filename: string, content: string, mime: string) {
@@ -219,19 +241,7 @@ function downloadBlob(filename: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-const NAV: {
-  id: DashboardView;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "proxies", label: "My Proxies", icon: HardDrive },
-  { id: "buy", label: "Buy Proxies", icon: ShoppingCart },
-  { id: "funds", label: "Add Funds", icon: Wallet },
-  { id: "developer", label: "Developer API", icon: Braces },
-];
-
-export function DashboardClient({ initialData }: DashboardClientProps) {
+function DashboardClientInner({ initialData }: DashboardClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -241,10 +251,16 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     [searchParams]
   );
 
+  const referralShareUrl = useMemo(
+    () =>
+      `${SITE_URL.replace(/\/$/, "")}/?ref=${encodeURIComponent(initialData.referralCode)}`,
+    [initialData.referralCode]
+  );
+
   const navigateView = useCallback(
     (next: DashboardView) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set(VIEW_PARAM, next);
+      params.set(VIEW_PARAM, VIEW_QUERY_SLUG[next]);
       router.push(`/dashboard?${params.toString()}`, { scroll: false });
     },
     [router, searchParams]
@@ -257,6 +273,58 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     "203.0.113.0/24, 198.51.100.10"
   );
   const [apiKeyRevealed, setApiKeyRevealed] = useState(false);
+  const [payYearly, setPayYearly] = useState(false);
+  const [aiAgentTab, setAiAgentTab] = useState<
+    "seo" | "ad" | "streaming" | "social"
+  >("seo");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [copiedButtonId, setCopiedButtonId] = useState<string | null>(null);
+  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const goView = useCallback(
+    (next: DashboardView) => {
+      navigateView(next);
+      setSidebarOpen(false);
+    },
+    [navigateView]
+  );
+
+  const goBilling = useCallback(() => {
+    router.push("/dashboard?view=billing", { scroll: false });
+    setSidebarOpen(false);
+  }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen]);
+
+  const bumpCopiedId = useCallback((id: string) => {
+    if (copyResetRef.current) clearTimeout(copyResetRef.current);
+    setCopiedButtonId(id);
+    copyResetRef.current = setTimeout(() => {
+      setCopiedButtonId(null);
+      copyResetRef.current = null;
+    }, 2000);
+  }, []);
+
+  const copyWithFeedback = useCallback(
+    async (id: string, text: string, toastLabel: string) => {
+      const ok = await clipboardWriteWithToast(text, toastLabel);
+      if (ok) bumpCopiedId(id);
+    },
+    [bumpCopiedId]
+  );
 
   const parsedQuantity = Number(quantity) || 0;
   const orderTotal = useMemo(
@@ -338,7 +406,11 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       toast.error("No proxies to copy yet.");
       return;
     }
-    void copyText(formatProxyList(initialData.proxies), "Proxy list");
+    void copyWithFeedback(
+      "proxy-all",
+      formatProxyList(initialData.proxies),
+      "Proxy list"
+    );
   }
 
   function handleExportTxt() {
@@ -352,32 +424,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       "text/plain"
     );
     toast.success("Downloaded .TXT");
-  }
-
-  function handleExportJson() {
-    if (initialData.proxies.length === 0) {
-      toast.error("No proxies to export yet.");
-      return;
-    }
-    downloadBlob(
-      `ipnova-proxies-${Date.now()}.json`,
-      proxiesToJson(initialData.proxies),
-      "application/json"
-    );
-    toast.success("Downloaded .JSON");
-  }
-
-  function handleExportCsv() {
-    if (initialData.proxies.length === 0) {
-      toast.error("No proxies to export yet.");
-      return;
-    }
-    downloadBlob(
-      `ipnova-proxies-${Date.now()}.csv`,
-      proxiesToCsv(initialData.proxies),
-      "text/csv"
-    );
-    toast.success("Downloaded .CSV");
   }
 
   function handleSaveWhitelistMock() {
@@ -399,7 +445,18 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         transition={{ duration: 0.4 }}
       >
         <nav className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex min-w-0 items-center gap-2 lg:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 border-white/15 text-zinc-200 lg:hidden"
+              aria-label="Open navigation"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="size-5" />
+            </Button>
+          <Link href="/" className="flex min-w-0 items-center gap-2.5">
             <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
             <div>
               <span className="font-heading text-base font-semibold tracking-tight text-white">
@@ -408,6 +465,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               <p className="text-[10px] text-zinc-500">Enterprise proxy network</p>
             </div>
           </Link>
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div
@@ -421,17 +479,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 {formatCurrency(balance)}
               </span>
             </div>
-            {initialData.isAdmin && (
-              <motion.div {...hoverLift} {...tapScale}>
-                <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-black"
-                  render={<Link href="/admin" />}
-                >
-                  Admin
-                </Button>
-              </motion.div>
-            )}
             <motion.div {...hoverLift} {...tapScale}>
               <Button
                 variant="outline"
@@ -446,43 +493,207 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         </nav>
       </motion.header>
 
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1600px] flex-col lg:flex-row">
+      <div className="relative mx-auto flex w-full min-h-[calc(100vh-4rem)] max-w-[1600px] flex-1 flex-col lg:flex-row">
+        {sidebarOpen ? (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-[2px] lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        ) : null}
+
         <aside
           className={cn(
-            "flex shrink-0 gap-1 overflow-x-auto border-b border-white/[0.06] p-3 lg:w-60 lg:flex-col lg:border-b-0 lg:border-r lg:border-white/[0.06] lg:bg-[#050505]/40 lg:p-4 xl:w-64"
+            "fixed inset-y-0 left-0 z-50 flex max-h-[100dvh] w-[min(17rem,88vw)] flex-col overflow-y-auto border-r border-white/[0.06] bg-[#050505] p-3 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.85)] transition-transform duration-200 ease-out",
+            "lg:static lg:z-auto lg:max-h-none lg:w-56 lg:shrink-0 lg:border-white/[0.06] lg:bg-[#050505]/40 lg:p-3 lg:shadow-none xl:w-60",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
-          <p className="mb-3 hidden px-2 text-[10px] font-semibold tracking-[0.2em] text-zinc-500 uppercase lg:block">
-            Workspace
-          </p>
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = view === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => navigateView(item.id)}
-                className={cn(
-                  "flex min-w-[9.5rem] shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors lg:min-w-0",
-                  active
-                    ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
-                    : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
-                )}
-              >
-                <Icon
+          <div className="mb-3 flex shrink-0 items-center justify-between border-b border-white/[0.08] pb-3 lg:hidden">
+            <span className="px-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+              Navigation
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-zinc-400"
+              aria-label="Close menu"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="size-5" />
+            </Button>
+          </div>
+
+          <div className="flex flex-1 flex-col gap-8 lg:flex-1 lg:gap-0">
+            <div className="w-full">
+              <p className="mt-0 mb-2 px-3 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                Products
+              </p>
+              <div className="flex flex-col gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => goView("overview")}
                   className={cn(
-                    "size-4 shrink-0",
-                    active ? "text-emerald-400" : "text-zinc-500"
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "overview"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   )}
-                />
-                {item.label}
-              </button>
-            );
-          })}
+                >
+                  <LayoutDashboard
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "overview" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  Overview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goView("proxies")}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "proxies"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <Server
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "proxies" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  <span className="min-w-0 flex-1">Proxy List</span>
+                  <Badge className="ml-auto h-4 border-none bg-emerald-500/10 px-1.5 text-[10px] font-semibold leading-none text-emerald-500">
+                    ACTIVE
+                  </Badge>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goView("proxies")}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "proxies"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <HardDrive
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "proxies" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  Datacenter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goView("proxies")}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "proxies"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <Wifi
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "proxies" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  Residential
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full">
+              <p className="mt-6 mb-2 px-3 text-[10px] font-bold tracking-widest text-zinc-500 uppercase lg:mt-6">
+                Workspace
+              </p>
+              <div className="mt-0 flex flex-col gap-0.5 lg:mt-0">
+                <button
+                  type="button"
+                  onClick={() => goView("funds")}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "funds"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <Wallet
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "funds" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  Billing & Top-up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goView("affiliate")}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "affiliate"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <TrendingUp
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "affiliate" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  Affiliate Program
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full">
+              <p className="mt-6 mb-2 px-3 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                Developer
+              </p>
+              <div className="flex flex-col gap-0.5">
+                <Link
+                  href="/dashboard?view=developer-api"
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/[0.03] hover:text-zinc-200"
+                >
+                  <BookOpen className="size-4 shrink-0 text-zinc-500" />
+                  API Docs
+                </Link>
+                <Link
+                  href="/tools"
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/[0.03] hover:text-zinc-200"
+                >
+                  <BookMarked className="size-4 shrink-0 text-zinc-500" />
+                  Setup Guides
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {initialData.isAdmin && (
+            <div className="mt-4 border-t border-white/[0.06] pt-3">
+              <Link
+                href="/admin"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-center gap-2 rounded-lg py-2 text-[11px] text-zinc-600 transition-colors hover:text-zinc-400 lg:justify-start lg:px-2"
+              >
+                <Lock className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                <span className="font-medium tracking-wide">Admin panel</span>
+              </Link>
+            </div>
+          )}
         </aside>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:py-8">
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:py-8">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
@@ -515,200 +726,238 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             >
               {view === "overview" && (
                 <motion.div
-                  className="space-y-6"
+                  className="space-y-12"
                   variants={bentoContainer}
                   initial="hidden"
                   animate="show"
                 >
-                  <motion.div
-                    variants={bentoItem}
-                    className="grid gap-4 sm:grid-cols-3"
-                  >
-                    <MetricCard
-                      icon={Server}
-                      label="Active Proxies"
-                      value={String(activeProxies)}
-                      accent="cyan"
-                    />
-                    <MetricCard
-                      icon={Wallet}
-                      label="Total Balance"
-                      value={formatCurrency(balance)}
-                      accent="emerald"
-                    />
-                    <MetricCard
-                      icon={Activity}
-                      label="Network Uptime"
-                      value={
-                        <span className="flex items-center gap-2">
-                          <span className="relative flex size-2">
-                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/40" />
-                            <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-                          </span>
-                          99.98%
+                  {/* Section A — Most popular plans */}
+                  <motion.section variants={bentoItem} className="space-y-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h2 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                          Most popular plans
+                        </h2>
+                        <p className="mt-1 text-sm text-zinc-500">
+                          Enterprise-grade throughput with dedicated routing and
+                          SLA-backed infrastructure.
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="text-xs font-medium text-zinc-400">
+                          Pay yearly
                         </span>
-                      }
-                      accent="emerald"
-                    />
-                  </motion.div>
-
-                  <motion.div variants={bentoItem} className="grid gap-4 lg:grid-cols-12">
-                    <div className="lg:col-span-8">
-                      <Card className={cn(shellGlass, "h-full min-h-[300px]")}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="font-heading flex items-center gap-2 text-lg">
-                            <Wifi className="size-5 text-emerald-400" />
-                            Bandwidth usage
-                          </CardTitle>
-                          <CardDescription className="text-zinc-500">
-                            Last 7 days (illustrative aggregate, TB-scale normalized
-                            to GB for display)
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[280px] pt-0">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart
-                              data={BANDWIDTH_DEMO}
-                              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                            >
-                              <defs>
-                                <linearGradient
-                                  id="bandwidthFill"
-                                  x1="0"
-                                  y1="0"
-                                  x2="0"
-                                  y2="1"
-                                >
-                                  <stop
-                                    offset="0%"
-                                    stopColor="#34d399"
-                                    stopOpacity={0.45}
-                                  />
-                                  <stop
-                                    offset="100%"
-                                    stopColor="#34d399"
-                                    stopOpacity={0}
-                                  />
-                                </linearGradient>
-                                <linearGradient
-                                  id="bandwidthStroke"
-                                  x1="0"
-                                  y1="0"
-                                  x2="1"
-                                  y2="0"
-                                >
-                                  <stop offset="0%" stopColor="#6ee7b7" />
-                                  <stop offset="100%" stopColor="#10b981" />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid
-                                strokeDasharray="4 8"
-                                stroke="rgba(255,255,255,0.06)"
-                                vertical={false}
-                              />
-                              <XAxis
-                                dataKey="day"
-                                tick={{ fill: "#71717a", fontSize: 11 }}
-                                axisLine={false}
-                                tickLine={false}
-                              />
-                              <YAxis
-                                tick={{ fill: "#71717a", fontSize: 11 }}
-                                axisLine={false}
-                                tickLine={false}
-                                width={36}
-                              />
-                              <Tooltip
-                                contentStyle={{
-                                  background: "rgba(9,9,11,0.92)",
-                                  border: "1px solid rgba(255,255,255,0.08)",
-                                  borderRadius: 12,
-                                  fontSize: 12,
-                                }}
-                                labelStyle={{ color: "#a1a1aa" }}
-                                formatter={(v) => [`${Number(v)} GB`, "Usage"]}
-                              />
-                              <Area
-                                type="monotone"
-                                dataKey="gb"
-                                stroke="url(#bandwidthStroke)"
-                                strokeWidth={2}
-                                fill="url(#bandwidthFill)"
-                                dot={false}
-                                activeDot={{
-                                  r: 4,
-                                  fill: "#34d399",
-                                  stroke: "#022c22",
-                                  strokeWidth: 2,
-                                }}
-                              />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={payYearly}
+                          onClick={() => setPayYearly((v) => !v)}
+                          className={cn(
+                            "relative h-7 w-12 rounded-full border transition-colors",
+                            payYearly
+                              ? "border-emerald-500/40 bg-emerald-500/20"
+                              : "border-white/10 bg-white/[0.04]"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform",
+                              payYearly ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                        <span className="ml-2 rounded bg-fuchsia-500/20 px-2 py-0.5 text-xs font-bold text-fuchsia-300">
+                          SAVE 30%
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-4 lg:col-span-4">
-                      <Card className={cn(shellGlass, "flex-1")}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="font-heading flex items-center gap-2 text-base">
-                            <Shield className="size-4 text-cyan-400" />
-                            Quick setup
-                          </CardTitle>
-                          <CardDescription className="text-xs text-zinc-500">
-                            Standard auth string for your stack.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/[0.06] p-3 font-mono text-xs text-cyan-100">
-                            IP:Port:Username:Password
-                          </div>
-                          <ul className="space-y-2 text-xs text-zinc-400">
-                            <li className="flex gap-2">
-                              <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
-                              HTTP and SOCKS5 compatible endpoints
-                            </li>
-                            <li className="flex gap-2">
-                              <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
-                              Export hub for bulk automation
-                            </li>
-                          </ul>
-                        </CardContent>
-                      </Card>
-
-                      {initialData.deposits.length > 0 && (
-                        <Card className={cn(shellGlass)}>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Recent deposits</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ScrollArea className="h-[140px]">
-                              <div className="space-y-2 pr-3">
-                                {initialData.deposits.slice(0, 5).map((deposit) => (
-                                  <div
-                                    key={deposit.id}
-                                    className="flex items-center justify-between rounded-lg border border-white/[0.05] bg-black/30 px-3 py-2 text-xs"
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                      {[
+                        {
+                          title: "Proxy Server",
+                          Icon: Server,
+                          specs: ["100 Proxies", "250 GB Bandwidth"],
+                          price: payYearly ? "$24.99 /yr" : "$2.99 /mo",
+                        },
+                        {
+                          title: "Static Residential",
+                          Icon: Building2,
+                          specs: ["50 Dedicated IPs", "Unmetered sessions"],
+                          price: payYearly ? "$89.99 /yr" : "$9.99 /mo",
+                        },
+                        {
+                          title: "Rotating Residential",
+                          Icon: RefreshCw,
+                          specs: ["10M+ pool", "Country-level targeting"],
+                          price: payYearly ? "$119.99 /yr" : "$14.99 /mo",
+                        },
+                      ].map((plan) => (
+                        <div
+                          key={plan.title}
+                          className="rounded-xl border border-white/5 bg-white/[0.02] p-6"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
+                              <plan.Icon className="size-5 text-emerald-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-heading text-base font-semibold text-white">
+                                {plan.title}
+                              </h3>
+                              <ul className="mt-3 space-y-2">
+                                {plan.specs.map((s) => (
+                                  <li
+                                    key={s}
+                                    className="flex items-center gap-2 text-sm text-zinc-400"
                                   >
-                                    <span>{formatCurrency(deposit.amount)}</span>
-                                    <Badge
-                                      variant="outline"
-                                      className={cn(
-                                        deposit.status === "approved"
-                                          ? "border-emerald-500/35 text-emerald-400"
-                                          : "border-amber-500/35 text-amber-400"
-                                      )}
-                                    >
-                                      {deposit.status}
-                                    </Badge>
-                                  </div>
+                                    <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                                    {s}
+                                  </li>
                                 ))}
-                              </div>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
-                      )}
+                              </ul>
+                              <p className="mt-4 font-mono text-lg font-semibold tracking-tight text-white">
+                                {plan.price}
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-4 w-full border-emerald-500/40 bg-transparent text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                onClick={() => goBilling()}
+                              >
+                                Get Started
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </motion.div>
+                  </motion.section>
+
+                  {/* Section B — Setup guides */}
+                  <motion.section variants={bentoItem} className="space-y-3">
+                    <div>
+                      <h2 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                        Popular proxy setup guides
+                      </h2>
+                      <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+                        Learn how to use your proxies on the most popular apps and
+                        platforms.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+                      {SETUP_GUIDE_ITEMS.map(({ icon: Icon, label }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center transition-all hover:bg-white/[0.08]"
+                        >
+                          <Icon className="size-8 text-zinc-300" />
+                          <span className="text-xs font-medium text-zinc-400">
+                            {label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.section>
+
+                  {/* Section C — AI agent */}
+                  <motion.section variants={bentoItem} className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                        Use IP Nova with your AI agent
+                      </h2>
+                      <Badge className="border-0 bg-emerald-500/20 text-emerald-400">
+                        New
+                      </Badge>
+                    </div>
+                    <p className="max-w-3xl text-sm text-zinc-500">
+                      One command to drop the IP Nova skill into Claude, Gemini,
+                      Codex, and 40+ other agents.
+                    </p>
+
+                    <div className="flex flex-wrap gap-6 border-b border-white/10 text-sm font-medium">
+                      {(
+                        [
+                          ["seo", "SEO Monitoring"],
+                          ["ad", "Ad Verification"],
+                          ["streaming", "Streaming QA"],
+                          ["social", "Social Monitoring"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setAiAgentTab(id)}
+                          className={cn(
+                            "-mb-px border-b-2 pb-3 transition-colors",
+                            aiAgentTab === id
+                              ? "border-emerald-500 text-emerald-400"
+                              : "border-transparent text-zinc-500 hover:text-zinc-300"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-black p-6 font-mono text-sm">
+                      <p className="mb-2 text-zinc-500">1. Install the skill</p>
+                      <div className="mb-6 flex flex-col gap-3 rounded border border-white/5 bg-[#0a0a0a] p-3 text-emerald-400 sm:flex-row sm:items-center sm:justify-between">
+                        <pre className="min-w-0 max-w-full flex-1 overflow-x-auto whitespace-nowrap text-sm">{`$ ${SKILL_INSTALL_CMD}`}</pre>
+                        <button
+                          type="button"
+                          className="shrink-0 text-zinc-500 hover:text-zinc-300"
+                          aria-label="Copy install command"
+                          onClick={() =>
+                            void copyWithFeedback(
+                              "skill-cmd",
+                              SKILL_INSTALL_CMD,
+                              "Install command"
+                            )
+                          }
+                        >
+                          {copiedButtonId === "skill-cmd" ? (
+                            <Check className="size-4 text-emerald-400" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="mb-2 text-zinc-500">2. Try this prompt</p>
+                      <div className="flex flex-col gap-3 rounded border border-white/5 bg-[#0a0a0a] p-4 text-zinc-300 sm:flex-row sm:items-start sm:justify-between">
+                        <pre className="min-w-0 max-w-full flex-1 overflow-x-auto whitespace-nowrap leading-relaxed text-sm">{`> ${SKILL_PROMPT_SNIPPET}`}</pre>
+                        <button
+                          type="button"
+                          className="mt-0 shrink-0 self-end text-zinc-500 hover:text-zinc-300 sm:mt-1 sm:self-start"
+                          aria-label="Copy prompt"
+                          onClick={() =>
+                            void copyWithFeedback(
+                              "skill-prompt",
+                              SKILL_PROMPT_SNIPPET,
+                              "Prompt"
+                            )
+                          }
+                        >
+                          {copiedButtonId === "skill-prompt" ? (
+                            <Check className="size-4 text-emerald-400" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-4 text-sm text-zinc-400">
+                        <span>
+                          <CheckCircle2 className="mr-1 inline size-4 text-emerald-500" />
+                          Per-country ranking diff
+                        </span>
+                        <span>
+                          <CheckCircle2 className="mr-1 inline size-4 text-emerald-500" />
+                          Competitor movement ranked
+                        </span>
+                      </div>
+                    </div>
+                  </motion.section>
                 </motion.div>
               )}
 
@@ -845,6 +1094,159 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
               {view === "proxies" && (
                 <div className="space-y-6">
+                  <Card className={cn(shellGlass, "overflow-hidden")}>
+                    <CardHeader className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 lg:flex-row lg:items-end lg:justify-between">
+                      <div>
+                        <CardTitle className="font-heading text-xl text-white">
+                          Deployed proxies
+                        </CardTitle>
+                        <CardDescription className="text-zinc-500">
+                          Live credentials issued to your workspace. Copy or export in
+                          raw <span className="font-mono text-zinc-400">IP:PORT:USER:PASS</span>{" "}
+                          format for runners and secret managers.
+                        </CardDescription>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <motion.div {...hoverLift} {...tapScale}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={cn("border-white/12", shellGlass)}
+                            onClick={handleCopyAllProxies}
+                            disabled={activeProxies === 0}
+                          >
+                            {copiedButtonId === "proxy-all" ? (
+                              <Check className="size-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="size-3.5" />
+                            )}
+                            {copiedButtonId === "proxy-all" ? "Copied!" : "Copy all"}
+                          </Button>
+                        </motion.div>
+                        <motion.div {...hoverLift} {...tapScale}>
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300"
+                            onClick={handleExportTxt}
+                            disabled={activeProxies === 0}
+                          >
+                            <Download className="size-3.5" />
+                            Download .txt
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0 sm:p-6 sm:pt-0">
+                      {activeProxies === 0 ? (
+                        <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+                          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                            <Server className="size-7 text-zinc-500" aria-hidden />
+                          </div>
+                          <p className="font-heading text-lg font-semibold text-white">
+                            No active proxies found
+                          </p>
+                          <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
+                            Deposit crypto to order your first node. Once treasury confirms
+                            payment, our operators provision wholesale capacity (Vultr,
+                            ISP partners) directly into this table.
+                          </p>
+                          <Button
+                            className="mt-6 gap-2 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300"
+                            size="sm"
+                            onClick={() => goView("funds")}
+                          >
+                            <Wallet className="size-3.5" />
+                            Add funds &amp; order
+                          </Button>
+                        </div>
+                      ) : (
+                        <ScrollArea className="max-h-[min(560px,70vh)] w-full">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-white/[0.08] hover:bg-transparent">
+                                <TableHead className="text-zinc-400">IP address</TableHead>
+                                <TableHead className="text-zinc-400">Port</TableHead>
+                                <TableHead className="text-zinc-400">Username</TableHead>
+                                <TableHead className="text-zinc-400">Password</TableHead>
+                                <TableHead className="text-zinc-400">Type</TableHead>
+                                <TableHead className="text-zinc-400">Status</TableHead>
+                                <TableHead className="w-12 text-right text-zinc-400">
+                                  Copy
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {initialData.proxies.map((proxy) => {
+                                const line = formatProxyLine(proxy);
+                                return (
+                                  <TableRow
+                                    key={proxy.id}
+                                    className="border-white/[0.06] hover:bg-white/[0.02]"
+                                  >
+                                    <TableCell className="font-mono text-sm text-zinc-200">
+                                      {proxy.ip_address}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm text-zinc-300">
+                                      {proxy.port}
+                                    </TableCell>
+                                    <TableCell className="max-w-[140px] truncate font-mono text-xs text-cyan-100/90">
+                                      {proxy.username}
+                                    </TableCell>
+                                    <TableCell className="max-w-[120px] truncate font-mono text-xs text-zinc-400">
+                                      {proxy.password}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge className="border-white/10 bg-white/[0.04] text-xs font-normal text-zinc-300">
+                                        Datacenter
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400">
+                                        <span aria-hidden>🟢</span>
+                                        Active
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <UiTooltip>
+                                        <TooltipTrigger
+                                          render={
+                                            <Button
+                                              variant="ghost"
+                                              size="icon-sm"
+                                              className="text-zinc-400 hover:text-cyan-300"
+                                              onClick={() =>
+                                                void copyWithFeedback(
+                                                  `proxy-${proxy.id}`,
+                                                  line,
+                                                  "Proxy line"
+                                                )
+                                              }
+                                            />
+                                          }
+                                        >
+                                          {copiedButtonId === `proxy-${proxy.id}` ? (
+                                            <Check className="size-3.5 text-emerald-400" />
+                                          ) : (
+                                            <Copy className="size-3.5" />
+                                          )}
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {copiedButtonId === `proxy-${proxy.id}`
+                                            ? "Copied!"
+                                            : "Copy line"}
+                                        </TooltipContent>
+                                      </UiTooltip>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      )}
+                    </CardContent>
+                  </Card>
+
                   <Card className={cn(shellGlass)}>
                     <CardHeader>
                       <CardTitle className="text-lg">IP whitelist</CardTitle>
@@ -871,156 +1273,6 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                       >
                         Save whitelist
                       </Button>
-                    </CardContent>
-                  </Card>
-
-                  <Card className={cn(shellGlass)}>
-                    <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <CardTitle className="text-lg">My Proxies</CardTitle>
-                        <CardDescription className="text-zinc-500">
-                          {activeProxies} active endpoint{activeProxies === 1 ? "" : "s"}
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <p className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
-                          Export hub
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <motion.div {...hoverLift} {...tapScale}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={cn("border-white/12", shellGlass)}
-                              onClick={handleCopyAllProxies}
-                              disabled={activeProxies === 0}
-                            >
-                              <Copy className="size-3.5" />
-                              Copy all
-                            </Button>
-                          </motion.div>
-                          <motion.div {...hoverLift} {...tapScale}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-white/12"
-                              onClick={handleExportTxt}
-                              disabled={activeProxies === 0}
-                            >
-                              <Download className="size-3.5" />
-                              .TXT
-                            </Button>
-                          </motion.div>
-                          <motion.div {...hoverLift} {...tapScale}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-white/12"
-                              onClick={handleExportJson}
-                              disabled={activeProxies === 0}
-                            >
-                              <Download className="size-3.5" />
-                              .JSON
-                            </Button>
-                          </motion.div>
-                          <motion.div {...hoverLift} {...tapScale}>
-                            <Button
-                              size="sm"
-                              className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-black"
-                              onClick={handleExportCsv}
-                              disabled={activeProxies === 0}
-                            >
-                              <Download className="size-3.5" />
-                              .CSV
-                            </Button>
-                          </motion.div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {activeProxies === 0 ? (
-                        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/10 py-16 text-center">
-                          <HardDrive className="mb-3 size-10 text-zinc-600" />
-                          <p className="font-medium text-zinc-300">No proxies yet</p>
-                          <p className="mt-1 max-w-sm text-sm text-zinc-500">
-                            Purchase proxies in Buy Proxies. They appear here after our
-                            team fulfills your order.
-                          </p>
-                          <Button
-                            className="mt-4 bg-cyan-500 text-black hover:bg-cyan-400"
-                            size="sm"
-                            onClick={() => navigateView("buy")}
-                          >
-                            Buy Proxies
-                          </Button>
-                        </div>
-                      ) : (
-                        <ScrollArea className="w-full">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="border-white/10 hover:bg-transparent">
-                                <TableHead>Status</TableHead>
-                                <TableHead>Ping</TableHead>
-                                <TableHead>Proxy details</TableHead>
-                                <TableHead>Created</TableHead>
-                                <TableHead className="w-12" />
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {initialData.proxies.map((proxy) => {
-                                const line = formatProxyLine(proxy);
-                                const ms = pingMsForProxy(proxy.id);
-                                return (
-                                  <TableRow
-                                    key={proxy.id}
-                                    className="border-white/5 hover:bg-white/[0.02]"
-                                  >
-                                    <TableCell>
-                                      <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
-                                        Active
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      <span className="inline-flex items-center gap-2 tabular-nums text-sm text-zinc-300">
-                                        <span
-                                          className="size-2 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
-                                          aria-hidden
-                                        />
-                                        {ms}ms
-                                      </span>
-                                    </TableCell>
-                                    <TableCell>
-                                      <code className="rounded-md border border-white/[0.06] bg-zinc-950/80 px-2 py-1 font-mono text-xs text-cyan-100">
-                                        {line}
-                                      </code>
-                                    </TableCell>
-                                    <TableCell className="text-zinc-400">
-                                      {formatDate(proxy.created_at)}
-                                    </TableCell>
-                                    <TableCell>
-                                      <UiTooltip>
-                                        <TooltipTrigger
-                                          render={
-                                            <Button
-                                              variant="ghost"
-                                              size="icon-sm"
-                                              className="text-zinc-400 hover:text-cyan-300"
-                                              onClick={() => void copyText(line, "Proxy")}
-                                            />
-                                          }
-                                        >
-                                          <Copy className="size-3.5" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>Copy proxy</TooltipContent>
-                                      </UiTooltip>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </ScrollArea>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -1095,6 +1347,191 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 </motion.div>
               )}
 
+              {view === "affiliate" && (
+                <motion.div
+                  className="space-y-6"
+                  variants={bentoContainer}
+                  initial="hidden"
+                  animate="show"
+                >
+                  <motion.div variants={bentoItem}>
+                    <Card
+                      className={cn(
+                        shellGlass,
+                        "overflow-hidden border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] via-white/[0.02] to-cyan-500/[0.06] ring-1 ring-emerald-500/15"
+                      )}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className="border-0 bg-emerald-500/15 text-emerald-300">
+                            Growth
+                          </Badge>
+                          <Badge className="border-0 bg-cyan-500/10 text-cyan-300">
+                            20% recurring
+                          </Badge>
+                        </div>
+                        <CardTitle className="font-heading pt-2 text-2xl tracking-tight text-white sm:text-3xl">
+                          Invite developers.{" "}
+                          <span className="bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
+                            Earn 20% recurring commission.
+                          </span>
+                        </CardTitle>
+                        <CardDescription className="max-w-2xl text-[15px] text-zinc-400">
+                          Share IP Nova with teams running HTTP/HTTPS/SOCKS5 automation.
+                          When referrals activate paid plans, you earn on every renewal
+                          cycle—tracked transparently in this workspace.
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </motion.div>
+
+                  <motion.div variants={bentoItem}>
+                    <Card className={cn(shellGlass)}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="font-heading flex items-center gap-2 text-lg text-white">
+                          <Copy className="size-5 text-emerald-400" />
+                          Your referral link
+                        </CardTitle>
+                        <CardDescription className="text-zinc-500">
+                          Anyone who lands on this URL has your code stored locally until
+                          they register—perfect for docs, demos, and conference swag.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                        <Input
+                          readOnly
+                          value={referralShareUrl}
+                          className="h-11 border-white/[0.08] bg-black/40 font-mono text-sm text-zinc-200"
+                        />
+                        <Button
+                          type="button"
+                          className="h-11 shrink-0 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300"
+                          onClick={() =>
+                            void copyWithFeedback(
+                              "referral-link",
+                              referralShareUrl,
+                              "Referral link"
+                            )
+                          }
+                        >
+                          {copiedButtonId === "referral-link" ? (
+                            <Check className="size-4" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                          {copiedButtonId === "referral-link"
+                            ? "Copied!"
+                            : "Copy link"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  <motion.div
+                    variants={bentoItem}
+                    className="grid gap-4 sm:grid-cols-3"
+                  >
+                    <AffiliateGlowMetric
+                      label="Total clicks"
+                      value="2,450"
+                      glow="emerald"
+                    />
+                    <AffiliateGlowMetric
+                      label="Active referrals"
+                      value="14"
+                      glow="cyan"
+                    />
+                    <AffiliateGlowMetric
+                      label="Unpaid earnings"
+                      value="$350.00"
+                      glow="emerald"
+                    />
+                  </motion.div>
+
+                  <motion.div variants={bentoItem} className="grid gap-4 lg:grid-cols-5">
+                    <Card
+                      className={cn(
+                        shellGlass,
+                        "lg:col-span-2 border-amber-500/15 bg-gradient-to-br from-amber-500/[0.06] to-transparent"
+                      )}
+                    >
+                      <CardHeader>
+                        <CardTitle className="font-heading text-lg text-white">
+                          Payouts
+                        </CardTitle>
+                        <CardDescription className="text-sm text-zinc-400">
+                          Withdrawals settle in <strong className="text-zinc-200">USDT</strong>{" "}
+                          or <strong className="text-zinc-200">BTC</strong> on supported
+                          networks once your unpaid balance exceeds{" "}
+                          <strong className="text-amber-200">$50.00</strong>. Enterprise
+                          partners may request invoiced wires on signed agreements.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          type="button"
+                          size="lg"
+                          className="w-full bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 py-6 text-base font-semibold text-black shadow-[0_0_40px_-6px_rgba(251,191,36,0.55)] hover:from-amber-300 hover:via-orange-300 hover:to-amber-400"
+                          onClick={() =>
+                            toast.success("Payout request received — finance will confirm wallet details.")
+                          }
+                        >
+                          Request payout
+                        </Button>
+                        <p className="mt-3 text-center text-xs text-zinc-500">
+                          Mock UI — settlement rails activate after compliance review.
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className={cn(shellGlass, "lg:col-span-3")}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="font-heading text-lg text-white">
+                          Recent referrals
+                        </CardTitle>
+                        <CardDescription className="text-zinc-500">
+                          Latest attributed signups (masked IDs). Demo data for layout
+                          preview.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0 sm:px-6">
+                        <ScrollArea className="h-[280px] sm:h-[240px]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-white/[0.06] hover:bg-transparent">
+                                <TableHead className="text-zinc-400">Date</TableHead>
+                                <TableHead className="text-zinc-400">User</TableHead>
+                                <TableHead className="text-right text-zinc-400">
+                                  Commission
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {AFFILIATE_DEMO_ROWS.map((row) => (
+                                <TableRow
+                                  key={row.at}
+                                  className="border-white/[0.06] hover:bg-white/[0.02]"
+                                >
+                                  <TableCell className="font-mono text-xs text-zinc-400">
+                                    {formatDate(row.at)}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm text-emerald-200/90">
+                                    {row.masked}
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium text-white">
+                                    {formatCurrency(row.commission)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </motion.div>
+              )}
+
               {view === "developer" && (
                 <div className="mx-auto max-w-3xl space-y-6">
                   <Card className={cn(shellGlass)}>
@@ -1142,10 +1579,20 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                             type="button"
                             size="sm"
                             className="bg-emerald-500 text-black hover:bg-emerald-400"
-                            onClick={() => void copyText(MOCK_API_KEY, "API key")}
+                            onClick={() =>
+                              void copyWithFeedback(
+                                "api-key",
+                                MOCK_API_KEY,
+                                "API key"
+                              )
+                            }
                           >
-                            <Copy className="size-3.5" />
-                            Copy
+                            {copiedButtonId === "api-key" ? (
+                              <Check className="size-3.5" />
+                            ) : (
+                              <Copy className="size-3.5" />
+                            )}
+                            {copiedButtonId === "api-key" ? "Copied!" : "Copy"}
                           </Button>
                         </div>
                       </div>
@@ -1161,7 +1608,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <pre className="max-h-[220px] overflow-auto rounded-lg border border-white/[0.06] bg-black/50 p-3 text-[11px] leading-relaxed text-zinc-300">
+                        <pre className="max-h-[220px] overflow-x-auto whitespace-pre rounded-lg border border-white/[0.06] bg-black/50 p-3 text-[11px] leading-relaxed text-zinc-300">
                           {`curl -sS https://api.ipnova.online/v1/proxies \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Accept: application/json"`}
@@ -1176,7 +1623,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <pre className="max-h-[220px] overflow-auto rounded-lg border border-white/[0.06] bg-black/50 p-3 text-[11px] leading-relaxed text-zinc-300">
+                        <pre className="max-h-[220px] overflow-x-auto whitespace-pre rounded-lg border border-white/[0.06] bg-black/50 p-3 text-[11px] leading-relaxed text-zinc-300">
                           {`import requests
 
 r = requests.get(
@@ -1203,48 +1650,52 @@ data = r.json()`}
   );
 }
 
-function MetricCard({
-  icon: Icon,
+function AffiliateGlowMetric({
   label,
   value,
-  accent,
+  glow,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: React.ReactNode;
-  accent: "cyan" | "emerald";
+  value: string;
+  glow: "emerald" | "cyan";
 }) {
-  const accentClass =
-    accent === "cyan"
-      ? "from-cyan-500/10 ring-cyan-500/20 text-cyan-400"
-      : "from-emerald-500/10 ring-emerald-500/20 text-emerald-400";
+  const halo =
+    glow === "emerald"
+      ? "from-emerald-400/35 via-emerald-500/10 to-transparent"
+      : "from-cyan-400/35 via-cyan-500/10 to-transparent";
+  const textGrad =
+    glow === "emerald"
+      ? "from-emerald-200 to-cyan-200 drop-shadow-[0_0_26px_rgba(52,211,153,0.42)]"
+      : "from-cyan-200 to-emerald-200 drop-shadow-[0_0_26px_rgba(34,211,238,0.42)]";
 
   return (
     <motion.div {...hoverLift}>
       <Card
         className={cn(
           shellGlass,
-          "h-full bg-gradient-to-br to-zinc-950/30 ring-1 ring-inset",
-          accentClass.split(" ").slice(0, 2).join(" ")
+          "relative h-full overflow-hidden ring-1 ring-inset ring-white/[0.07]"
         )}
       >
-        <CardContent className="flex items-start justify-between p-5">
-          <div className="min-w-0">
-            <p className="text-xs font-medium tracking-wider text-zinc-500 uppercase">
-              {label}
-            </p>
-            <div className="mt-2 font-heading text-2xl font-bold tracking-tight">
-              {value}
-            </div>
-          </div>
-          <div
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-gradient-to-b opacity-90",
+            halo
+          )}
+          aria-hidden
+        />
+        <CardContent className="relative p-5 sm:p-6">
+          <p className="text-xs font-medium tracking-wider text-zinc-500 uppercase">
+            {label}
+          </p>
+          <p
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-lg ring-1",
-              accentClass
+              "mt-3 font-heading text-3xl font-bold tracking-tight tabular-nums sm:text-4xl",
+              "bg-gradient-to-r bg-clip-text text-transparent",
+              textGrad
             )}
           >
-            <Icon className="size-5" />
-          </div>
+            {value}
+          </p>
         </CardContent>
       </Card>
     </motion.div>
@@ -1293,5 +1744,13 @@ function ProductCard({
       <p className="mt-1 text-sm font-medium text-cyan-300">{priceLabel}</p>
       <p className="mt-2 text-sm text-zinc-400">{description}</p>
     </motion.button>
+  );
+}
+
+export function DashboardClient(props: DashboardClientProps) {
+  return (
+    <Suspense fallback={<SearchParamsSuspenseFallback />}>
+      <DashboardClientInner {...props} />
+    </Suspense>
   );
 }

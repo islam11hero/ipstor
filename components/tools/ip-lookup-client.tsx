@@ -59,7 +59,7 @@ export function IpLookupClient() {
       />
       <div className="flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-emerald-500/90 uppercase">
         <Globe2 className="size-3.5" aria-hidden />
-        Free tool
+        Utility
       </div>
       <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
         IP lookup

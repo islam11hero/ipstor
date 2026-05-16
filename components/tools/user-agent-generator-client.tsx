@@ -110,7 +110,7 @@ export function UserAgentGeneratorClient() {
     try {
       await navigator.clipboard.writeText(ua);
       setCopiedIdx(idx);
-      toast.success("Copied!");
+      toast.success("User-agent copied to clipboard");
       window.setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 2000);
     } catch {
       toast.error("Could not copy");
@@ -125,7 +125,7 @@ export function UserAgentGeneratorClient() {
       />
       <div className="flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-violet-400/90 uppercase">
         <Sparkles className="size-3.5" aria-hidden />
-        Free tool
+        Utility
       </div>
       <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
         User-Agent generator

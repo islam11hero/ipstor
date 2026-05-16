@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   Boxes,
   Cpu,
@@ -31,12 +32,16 @@ const pills = [
 ] as const;
 
 export function IntegrationsApiBlock() {
+  const [copied, setCopied] = useState(false);
+
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(CURL_SNIPPET);
-      toast.success("Snippet copied");
+      toast.success("Snippet copied to clipboard");
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Could not copy");
+      toast.error("Could not copy. Please copy manually.");
     }
   }
 
@@ -109,10 +114,10 @@ export function IntegrationsApiBlock() {
               className="border-white/10 bg-white/[0.04] text-[11px] text-zinc-200 hover:bg-white/[0.08]"
               onClick={() => void handleCopy()}
             >
-              Copy
+              {copied ? "Copied!" : "Copy"}
             </Button>
           </div>
-          <pre className="max-h-[320px] overflow-auto p-4 font-mono text-[11px] leading-relaxed sm:text-xs sm:leading-relaxed">
+          <pre className="max-h-[320px] overflow-x-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-relaxed sm:text-xs sm:leading-relaxed">
             <code>
               <span className="text-emerald-400">curl</span>{" "}
               <span className="text-zinc-500">-sS</span>{" "}

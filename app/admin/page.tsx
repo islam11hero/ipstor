@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { Network } from "lucide-react";
 
 import { AdminPanel } from "@/components/admin/admin-panel";
@@ -83,14 +82,12 @@ export default async function AdminPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <Suspense fallback={null}>
-          <AdminPanel
-            deposits={deposits}
-            orders={orders}
-            activeUserCount={activeUserCount}
-          />
-        </Suspense>
+      <main className="mx-auto max-w-7xl px-6 py-12">
+        <AdminPanel
+          deposits={deposits}
+          orders={orders}
+          activeUserCount={activeUserCount}
+        />
       </main>
     </div>
   );

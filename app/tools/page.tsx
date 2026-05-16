@@ -6,9 +6,9 @@ import { Fingerprint, Gauge, Globe2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Free proxy tools",
+  title: "Operator tools",
   description:
-    "Free IP lookup, bulk proxy format validator, and user-agent generator from IP Nova — engineering-grade utilities for operators and developers.",
+    "IP lookup, bulk proxy format validator, and user-agent generator from IP Nova — engineering-grade utilities for operators and developers.",
 };
 
 const glass =
@@ -61,7 +61,7 @@ export default function ToolsHubPage() {
         Engineering as marketing
       </div>
       <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-        Free tools for serious operators
+        Production-grade tools for operators
       </h1>
       <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-zinc-500">
         No sign-up required to explore. Each utility is built to mirror production

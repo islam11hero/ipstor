@@ -21,4 +21,6 @@ export type DashboardData = {
   proxies: UserProxy[];
   deposits: UserDeposit[];
   isAdmin: boolean;
+  /** Short code for affiliate referral URLs (`usr_<segment>`). */
+  referralCode: string;
 };

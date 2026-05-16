@@ -5,7 +5,7 @@ import { UserAgentGeneratorClient } from "@/components/tools/user-agent-generato
 export const metadata: Metadata = {
   title: "User-Agent Generator",
   description:
-    "Generate modern browser user-agent strings for Windows, Mac, and Linux — free tool from IP Nova.",
+    "Generate modern browser user-agent strings for Windows, Mac, and Linux from IP Nova.",
 };
 
 export default function UserAgentGeneratorPage() {
