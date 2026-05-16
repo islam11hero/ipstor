@@ -56,6 +56,7 @@ export async function POST(request: Request) {
 
   const price_amount = Math.round(amount * 100) / 100;
 
+  // Revenue-critical: production defaults to https://ipnova.online (see lib/nowpayments-urls).
   const invoicePayload = {
     price_amount,
     price_currency: "usd",

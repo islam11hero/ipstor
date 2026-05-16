@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import {
   Activity,
   ArrowRight,
-  Globe,
-  Headphones,
+  Network,
   Shield,
   Zap,
 } from "lucide-react";
@@ -18,7 +17,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatSlugTitle, isSeoCategory } from "@/lib/seo-slug";
+import { getDynamicContent } from "@/lib/seo-dynamic-content";
+import { SEO_NAV_PATHS } from "@/lib/seo-sitemap-paths";
+import { formatSlugTitle, isSeoCategory, type SeoCategory } from "@/lib/seo-slug";
 import { SITE_URL } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 
@@ -29,15 +30,23 @@ type PageProps = {
   params: Promise<{ category: string; slug: string }>;
 };
 
+export function generateStaticParams() {
+  return SEO_NAV_PATHS.map(({ category, slug }) => ({
+    category,
+    slug,
+  }));
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { category, slug } = await params;
   if (!isSeoCategory(category)) {
     notFound();
   }
   const formatted = formatSlugTitle(slug);
+  const content = getDynamicContent(category, slug);
   return {
     title: formatted,
-    description: `Premium ${formatted} for enterprise teams — global coverage, contractual SLAs, and infrastructure you can trust.`,
+    description: content.metaDescription,
     alternates: { canonical: `${SITE_URL}/${category}/${slug}` },
   };
 }
@@ -49,30 +58,14 @@ export default async function SeoLandingPage({ params }: PageProps) {
     notFound();
   }
 
-  const formattedSlug = formatSlugTitle(slug);
+  const c = category as SeoCategory;
+  const content = getDynamicContent(c, slug);
 
-  const bento = [
-    {
-      icon: Activity,
-      title: "99.9% uptime",
-      body: "Carrier-grade routing and redundant upstreams keep your pipelines online.",
-    },
-    {
-      icon: Shield,
-      title: "Zero IP blocks",
-      body: "Fresh pools, rotation controls, and abuse-aware policies reduce captchas and bans.",
-    },
-    {
-      icon: Headphones,
-      title: "24/7 support",
-      body: "Dedicated solutions engineers for onboarding, scaling, and incident response.",
-    },
-    {
-      icon: Zap,
-      title: "Low-latency edge",
-      body: "Metro-peered egress so scraping, verification, and ad ops stay fast worldwide.",
-    },
-  ] as const;
+  const featureIcons = [Activity, Shield, Zap] as const;
+  const bento = content.features.map((f, i) => {
+    const Icon = featureIcons[i] ?? Activity;
+    return { ...f, Icon };
+  });
 
   return (
     <div className="relative min-h-screen bg-[#050505] text-zinc-100">
@@ -84,9 +77,9 @@ export default async function SeoLandingPage({ params }: PageProps) {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
+            <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
             <span className="font-heading text-base font-semibold tracking-tight text-white">
-              ProxyNova
+              IP Nova
             </span>
           </Link>
           <Button
@@ -101,18 +94,16 @@ export default async function SeoLandingPage({ params }: PageProps) {
 
       <main className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <p className="text-xs font-medium tracking-[0.25em] text-emerald-400/90 uppercase">
-          {category.charAt(0).toUpperCase() + category.slice(1)}
+          {content.eyebrow}
         </p>
         <h1 className="mt-4 max-w-3xl font-heading text-4xl font-bold tracking-tight sm:text-5xl">
-          Premium {formattedSlug}{" "}
+          {content.h1Before}{" "}
           <span className="bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-            for enterprise
+            {content.h1Gradient}
           </span>
         </h1>
         <p className="mt-5 max-w-2xl text-lg leading-relaxed text-zinc-400">
-          Contract-ready infrastructure, transparent routing, and compliance-minded
-          operations—built for security teams, data platforms, and growth orgs that
-          cannot afford downtime.
+          {content.lead}
         </p>
 
         <div className="mt-10 flex flex-wrap gap-4">
@@ -134,9 +125,9 @@ export default async function SeoLandingPage({ params }: PageProps) {
           </Button>
         </div>
 
-        <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {bento.map((item) => {
-            const Icon = item.icon;
+            const Icon = item.Icon;
             return (
               <Card key={item.title} className={cn(shell, "overflow-hidden")}>
                 <CardHeader className="pb-2">
@@ -158,11 +149,10 @@ export default async function SeoLandingPage({ params }: PageProps) {
         <Card className={cn(shell, "mt-12 border-cyan-500/15")}>
           <CardHeader>
             <CardTitle className="font-heading text-xl">
-              Why teams choose ProxyNova for {formattedSlug}
+              {content.bottomTitle}
             </CardTitle>
             <CardDescription className="text-base text-zinc-500">
-              Single invoice, predictable egress, and SOC-minded controls—without
-              sacrificing throughput on {formattedSlug.toLowerCase()} workloads.
+              {content.bottomLead}
             </CardDescription>
           </CardHeader>
           <CardContent>

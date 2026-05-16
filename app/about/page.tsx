@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Globe } from "lucide-react";
+import { Network } from "lucide-react";
 
 export const metadata = {
   title: "About",
-  description: "Learn about ProxyNova and our mission in enterprise proxy infrastructure.",
+  description: "Learn about IP Nova and our mission in enterprise proxy infrastructure.",
 };
 
 export default function AboutPage() {
@@ -16,8 +16,8 @@ export default function AboutPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white">
-            <Globe className="h-6 w-6 text-emerald-500" aria-hidden />
-            <span className="font-heading font-semibold text-white">ProxyNova</span>
+            <Network className="h-6 w-6 text-emerald-400" aria-hidden />
+            <span className="font-heading font-semibold text-white">IP Nova</span>
           </Link>
           <Link href="/login" className="text-sm text-zinc-500 hover:text-white">
             Sign in
@@ -25,9 +25,9 @@ export default function AboutPage() {
         </div>
       </header>
       <article className="prose-legal px-6 py-16 lg:py-24">
-        <h1>About ProxyNova</h1>
+        <h1>About IP Nova</h1>
         <p>
-          ProxyNova is a leading proxy infrastructure provider, delivering
+          IP Nova is a leading proxy infrastructure provider, delivering
           datacenter and residential endpoints to organizations that depend on
           reliable, ethically sourced network access for data acquisition, ad
           verification, security research, and large-scale automation.
@@ -47,7 +47,7 @@ export default function AboutPage() {
         </p>
         <h2>How we work with customers</h2>
         <p>
-          ProxyNova engages with data science, growth, and security teams that
+          IP Nova engages with data science, growth, and security teams that
           require contractual clarity, documented acceptable use, and responsive
           technical partnership. Enterprise customers may access volume pricing,
           custom routing policies, and dedicated onboarding.
@@ -55,8 +55,8 @@ export default function AboutPage() {
         <h2>Contact</h2>
         <p>
           For general inquiries and partnership discussions, contact{" "}
-          <a href="mailto:hello@proxynova.io">hello@proxynova.io</a>. For legal
-          matters, contact <a href="mailto:legal@proxynova.io">legal@proxynova.io</a>
+          <a href="mailto:hello@ipnova.online">hello@ipnova.online</a>. For legal
+          matters, contact <a href="mailto:legal@ipnova.online">legal@ipnova.online</a>
           .
         </p>
       </article>

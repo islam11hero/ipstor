@@ -51,9 +51,11 @@ export default async function DashboardPage() {
       <Suspense fallback={null}>
         <FlashToast />
       </Suspense>
-      <DashboardShell>
-        <DashboardClient initialData={data} />
-      </DashboardShell>
+      <Suspense fallback={null}>
+        <DashboardShell>
+          <DashboardClient initialData={data} />
+        </DashboardShell>
+      </Suspense>
     </>
   );
 }

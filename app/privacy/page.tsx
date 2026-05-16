@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Globe } from "lucide-react";
+import { Network } from "lucide-react";
 
 export const metadata = {
   title: "Privacy Policy",
-  description: "ProxyNova privacy policy and data practices.",
+  description: "IP Nova privacy policy and data practices.",
 };
 
 export default function PrivacyPage() {
@@ -16,8 +16,8 @@ export default function PrivacyPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white">
-            <Globe className="h-6 w-6 text-emerald-500" aria-hidden />
-            <span className="font-heading font-semibold text-white">ProxyNova</span>
+            <Network className="h-6 w-6 text-emerald-400" aria-hidden />
+            <span className="font-heading font-semibold text-white">IP Nova</span>
           </Link>
           <Link href="/login" className="text-sm text-zinc-500 hover:text-white">
             Sign in
@@ -27,8 +27,8 @@ export default function PrivacyPage() {
       <article className="prose-legal px-6 py-16 lg:py-24">
         <h1>Privacy Policy</h1>
         <p className="text-sm text-zinc-500">
-          Last updated: January 1, 2026. ProxyNova, a leading proxy infrastructure
-          provider (&ldquo;ProxyNova,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
+          Last updated: January 1, 2026. IP Nova, a leading proxy infrastructure
+          provider (&ldquo;IP Nova,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
           &ldquo;our&rdquo;) describes how we collect, use, disclose, and safeguard
           information in connection with our websites, dashboards, and services
           (collectively, the &ldquo;Services&rdquo;).
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
         <h2>1. Scope</h2>
         <p>
           This Privacy Policy applies to visitors of our marketing websites,
-          registered users of the ProxyNova dashboard, and business contacts who
+          registered users of the IP Nova dashboard, and business contacts who
           interact with our sales and support teams. If you use the Services on
           behalf of an organization, that organization&apos;s agreement with us may
           also govern certain processing activities.
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
         <h3>2.3 Payment data</h3>
         <p>
           Payment processing may be performed by third-party payment partners. We do
-          not store full payment card numbers on ProxyNova infrastructure when
+          not store full payment card numbers on IP Nova infrastructure when
           payments are processed by those partners. We may store limited payment
           metadata required for reconciliation, invoicing, and fraud prevention.
         </p>
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
           analytics, payment processing, and customer communications, subject to
           confidentiality obligations. We may disclose information if required by
           law, court order, or to protect the rights, property, or safety of
-          ProxyNova, our customers, or the public.
+          IP Nova, our customers, or the public.
         </p>
 
         <h2>5. Data retention</h2>
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
 
         <h2>6. Security</h2>
         <p>
-          ProxyNova implements administrative, technical, and organizational
+          IP Nova implements administrative, technical, and organizational
           measures designed to protect information against unauthorized access,
           alteration, disclosure, or destruction. No method of transmission over
           the Internet is completely secure; we encourage customers to protect
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
           Depending on your jurisdiction, you may have rights to access, correct,
           delete, or restrict certain processing of your personal information, or to
           object to processing. To exercise rights, contact{" "}
-          <a href="mailto:privacy@proxynova.io">privacy@proxynova.io</a>. We may
+          <a href="mailto:privacy@ipnova.online">privacy@ipnova.online</a>. We may
           need to verify your identity before fulfilling requests.
         </p>
 
@@ -130,7 +130,7 @@ export default function PrivacyPage() {
         <h2>11. Contact</h2>
         <p>
           Questions about this Privacy Policy:{" "}
-          <a href="mailto:privacy@proxynova.io">privacy@proxynova.io</a>
+          <a href="mailto:privacy@ipnova.online">privacy@ipnova.online</a>
         </p>
       </article>
     </div>

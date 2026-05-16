@@ -25,6 +25,29 @@ function verifyNowPaymentsSignature(
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** All plausible Supabase `deposits.txid` values for this IPN payload (idempotency). */
+function collectIdempotencyTxids(data: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  const keys = [
+    "payment_id",
+    "invoice_id",
+    "id",
+    "paymentId",
+    "order_id",
+  ] as const;
+  for (const k of keys) {
+    const raw = data[k];
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      out.add(`np-${raw}`);
+    }
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      const t = raw.trim();
+      out.add(t.startsWith("np-") ? t : `np-${t}`);
+    }
+  }
+  return [...out];
+}
+
 export async function POST(request: Request) {
   const secret = process.env.NOWPAYMENTS_IPN_SECRET;
   if (!secret) {
@@ -96,13 +119,33 @@ export async function POST(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: existing } = await supabase
+  const idempotencyKeys = collectIdempotencyTxids(data);
+  if (idempotencyKeys.length === 0) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  const { data: priorApproved, error: priorErr } = await supabase
+    .from("deposits")
+    .select("id,txid,status")
+    .in("txid", idempotencyKeys)
+    .eq("status", "approved")
+    .limit(1);
+
+  if (priorErr) {
+    return NextResponse.json({ error: priorErr.message }, { status: 500 });
+  }
+
+  if (priorApproved && priorApproved.length > 0) {
+    return NextResponse.json({ ok: true, idempotent: true });
+  }
+
+  const { data: existingRow } = await supabase
     .from("deposits")
     .select("id")
     .eq("txid", txid)
     .maybeSingle();
 
-  if (existing) {
+  if (existingRow) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Globe, Loader2 } from "lucide-react";
+import { Loader2, Network } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -93,9 +93,9 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
         href="/"
         className="mb-8 flex items-center gap-2.5 transition-opacity hover:opacity-80"
       >
-        <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
+        <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
         <span className="font-heading text-lg font-semibold tracking-tight text-white">
-          ProxyNova
+          IP Nova
         </span>
       </Link>
 

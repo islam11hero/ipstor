@@ -7,19 +7,68 @@ import {
   Activity,
   ArrowRight,
   ArrowUpRight,
+  Building2,
   Check,
-  Globe,
   Layers,
   Network,
+  Server,
   Shield,
+  Smartphone,
+  Wifi,
   Zap,
 } from "lucide-react";
 
+import { HeroNetworkVisual } from "@/components/marketing/hero-network-visual";
+import { IntegrationsApiBlock } from "@/components/marketing/integrations-api-block";
 import { MarqueeTrust } from "@/components/marketing/marquee-trust";
+import { MarketingNavbar } from "@/components/marketing/marketing-navbar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const surface = "surface-bento";
+
+const glassProduct =
+  "group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.05] bg-white/[0.02] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl transition-colors hover:border-emerald-500/20 hover:bg-white/[0.035] sm:p-7";
+
+const solutionProducts = [
+  {
+    title: "Residential",
+    stat: "32M+ IPs",
+    price: "from $1.76/GB",
+    href: "/products/residential-proxies",
+    icon: Wifi,
+    description:
+      "Legitimate residential egress for rank tracking, ad verification, and high-trust scraping.",
+  },
+  {
+    title: "ISP",
+    stat: "Dedicated ASN",
+    price: "from $2.40/IP",
+    href: "/products/isp-proxies",
+    icon: Building2,
+    description:
+      "Static sessions that behave like home users—ideal for accounts, carts, and long-lived flows.",
+  },
+  {
+    title: "Datacenter",
+    stat: "50+ regions",
+    price: "from $1.50/IP",
+    href: "/products/datacenter-proxies",
+    icon: Server,
+    description:
+      "Throughput-first endpoints for bulk crawls, price intelligence, and internal tooling.",
+  },
+  {
+    title: "Mobile",
+    stat: "4G / 5G",
+    price: "from $3.20/GB",
+    href: "/products/mobile-proxies",
+    icon: Smartphone,
+    description:
+      "Carrier-grade mobile IPs when app integrity, device graphs, and geo fidelity matter most.",
+  },
+] as const;
 
 const reviews = [
   {
@@ -28,7 +77,7 @@ const reviews = [
     role: "Lead Data Scientist",
     company: "Meridian Analytics",
     quote:
-      "ProxyNova's residential network eliminated the scraping blocks we saw with commodity providers. Uptime has been indistinguishable from five-nines for our production pipelines.",
+      "IP Nova's residential network eliminated the scraping blocks we saw with commodity providers. Uptime has been indistinguishable from five-nines for our production pipelines.",
   },
   {
     img: "https://i.pravatar.cc/150?img=32",
@@ -64,42 +113,15 @@ export function MarketingHome() {
         aria-hidden
       />
 
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#050505]/75 backdrop-blur-xl">
-        <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6 lg:h-16">
-          <Link href="/" className="group flex items-center gap-2.5">
-            <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
-            <span className="font-heading text-[15px] font-semibold tracking-tight text-white">
-              ProxyNova
-            </span>
-          </Link>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-              render={<Link href="/login" />}
-            >
-              Sign in
-            </Button>
-            <Button
-              size="sm"
-              className="border border-emerald-500/30 bg-emerald-500/10 px-4 text-emerald-100 hover:bg-emerald-500/20"
-              render={<Link href="/login?tab=register" />}
-            >
-              Get access
-            </Button>
-          </div>
-        </nav>
-      </header>
+      <MarketingNavbar />
 
       <main>
-        <section className="mx-auto max-w-6xl px-6 pb-16 pt-20 lg:pb-24 lg:pt-28">
-          <div className="grid gap-12 lg:grid-cols-12 lg:gap-10 lg:items-end">
+        <section className="mx-auto max-w-7xl px-6 pb-16 pt-16 lg:pb-24 lg:pt-24">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-20">
             <motion.div
-              className="lg:col-span-7"
-              initial={false}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             >
               <p className="font-heading text-[11px] font-medium tracking-[0.28em] text-emerald-500/90 uppercase">
                 Infrastructure
@@ -126,7 +148,7 @@ export function MarketingHome() {
                 <Button
                   variant="ghost"
                   className="h-10 text-sm text-zinc-400 hover:bg-transparent hover:text-white"
-                  render={<Link href="#platform" />}
+                  render={<Link href="#use-cases" />}
                 >
                   Platform overview
                   <ArrowUpRight className="size-4 opacity-60" />
@@ -135,52 +157,75 @@ export function MarketingHome() {
             </motion.div>
 
             <motion.div
-              className="lg:col-span-5"
-              initial={false}
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+              transition={{
+                duration: 0.6,
+                delay: 0.08,
+                ease: [0.22, 1, 0.36, 1],
+              }}
             >
-              <div className={cn(surface, "relative overflow-hidden p-6 lg:p-8")}>
-                <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-emerald-500/10 blur-3xl" />
-                <div className="relative">
-                  <p className="font-heading text-[10px] tracking-[0.2em] text-zinc-500 uppercase">
-                    Live network
-                  </p>
-                  <div className="mt-4 flex items-baseline gap-2">
-                    <span className="font-heading text-4xl font-semibold tabular-nums text-white">
-                      99.94%
-                    </span>
-                    <span className="text-sm text-zinc-500">rolling SLA</span>
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-zinc-500">
-                    Multi-region egress with automated health checks and
-                    operator-visible incident history.
-                  </p>
-                  <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/[0.06] pt-6">
-                    <div>
-                      <p className="text-[10px] font-medium tracking-wider text-zinc-600 uppercase">
-                        Regions
-                      </p>
-                      <p className="mt-1 font-heading text-lg text-zinc-200">50+</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-medium tracking-wider text-zinc-600 uppercase">
-                        Formats
-                      </p>
-                      <p className="mt-1 font-heading text-lg text-zinc-200">
-                        HTTP / SOCKS5
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <HeroNetworkVisual />
             </motion.div>
           </div>
         </section>
 
         <MarqueeTrust />
 
-        <section id="platform" className="mx-auto max-w-6xl px-6 py-24 lg:py-32">
+        <section
+          id="solutions"
+          className="border-t border-white/[0.05] bg-gradient-to-b from-black/40 to-transparent py-20 lg:py-28"
+        >
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="max-w-2xl">
+              <p className="font-heading text-[11px] font-medium tracking-[0.28em] text-emerald-500/90 uppercase">
+                Product matrix
+              </p>
+              <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
+                Solutions for every use case
+              </h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-zinc-500">
+                Pick the network class that matches your workload—each SKU ships with the
+                same control plane, auth formats, and enterprise support posture.
+              </p>
+            </div>
+
+            <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              {solutionProducts.map((p) => {
+                const Icon = p.icon;
+                return (
+                  <Link key={p.title} href={p.href} className={cn(glassProduct, "block")}>
+                    <Badge className="w-fit border-none bg-emerald-500/10 text-emerald-400">
+                      {p.price}
+                    </Badge>
+                    <div className="mt-5 flex items-start justify-between gap-3">
+                      <p className="text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+                        {p.stat}
+                      </p>
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition-colors group-hover:border-emerald-500/30 group-hover:bg-emerald-500/10">
+                        <Icon className="size-5 text-emerald-400/90" aria-hidden />
+                      </div>
+                    </div>
+                    <h3 className="mt-4 font-heading text-xl font-semibold text-white">
+                      {p.title}
+                    </h3>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-500">
+                      {p.description}
+                    </p>
+                    <span className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400/90 transition-colors group-hover:text-emerald-300">
+                      Explore
+                      <ArrowUpRight className="size-3.5" />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <IntegrationsApiBlock />
+
+        <section id="use-cases" className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
           <div className="max-w-2xl">
             <h2 className="font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               One platform. Asymmetric by design.
@@ -275,7 +320,7 @@ export function MarketingHome() {
         </section>
 
         <section id="pricing" className="border-t border-white/[0.05] bg-black/30 py-24 lg:py-32">
-          <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-7xl px-6">
             <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
               <div>
                 <h2 className="font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl">
@@ -363,7 +408,7 @@ export function MarketingHome() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 py-24 lg:py-32">
+        <section className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
           <h2 className="font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Proof from production environments
           </h2>

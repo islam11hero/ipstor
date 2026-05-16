@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Globe,
+  Network,
   Mail,
   Send,
   Share2,
@@ -68,13 +68,23 @@ export function Footer() {
             <h3 className={heading}>Tools</h3>
             <ul className="mt-4 space-y-3">
               <li>
+                <Link href="/tools" className={linkClass}>
+                  Tools hub
+                </Link>
+              </li>
+              <li>
                 <Link href="/tools/proxy-tester" className={linkClass}>
-                  Proxy Tester
+                  Proxy format validator
                 </Link>
               </li>
               <li>
                 <Link href="/tools/ip-lookup" className={linkClass}>
                   IP Lookup
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/user-agent-generator" className={linkClass}>
+                  User-Agent Generator
                 </Link>
               </li>
               <li>
@@ -198,13 +208,13 @@ export function Footer() {
           <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <Link
               href="/"
-              className="inline-flex items-center font-heading text-base font-semibold tracking-tight text-white"
+              className="inline-flex items-center gap-2 font-heading text-base font-semibold tracking-tight text-white"
             >
-              <Globe
-                className="mr-2 inline h-5 w-5 shrink-0 text-emerald-500"
+              <Network
+                className="inline h-8 w-8 shrink-0 text-emerald-400"
                 aria-hidden
               />
-              ProxyNova
+              IP Nova
             </Link>
 
             <div className="flex flex-col gap-3 md:items-end">
@@ -212,21 +222,21 @@ export function Footer() {
                 <a
                   href="/resources/blog"
                   className="transition-colors hover:text-zinc-200"
-                  aria-label="ProxyNova blog"
+                  aria-label="IP Nova blog"
                 >
                   <Share2 className="size-5" />
                 </a>
                 <a
                   href="/company/contact-us"
                   className="transition-colors hover:text-zinc-200"
-                  aria-label="Contact ProxyNova"
+                  aria-label="Contact IP Nova"
                 >
                   <Send className="size-5" />
                 </a>
                 <a
-                  href="mailto:support@proxynova.io"
+                  href="mailto:support@ipnova.online"
                   className="transition-colors hover:text-zinc-200"
-                  aria-label="Email ProxyNova"
+                  aria-label="Email IP Nova"
                 >
                   <Mail className="size-5" />
                 </a>
@@ -235,7 +245,7 @@ export function Footer() {
                 VISA • MASTERCARD • CRYPTO
               </p>
               <p className="text-xs text-zinc-600">
-                &copy; 2026 ProxyNova. All rights reserved.
+                &copy; 2026 IP Nova. All rights reserved.
               </p>
             </div>
           </div>

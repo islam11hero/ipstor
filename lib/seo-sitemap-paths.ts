@@ -7,6 +7,7 @@ export const SEO_NAV_PATHS: readonly { category: string; slug: string }[] = [
   { category: "products", slug: "web-unblocker" },
   { category: "tools", slug: "proxy-tester" },
   { category: "tools", slug: "ip-lookup" },
+  { category: "tools", slug: "user-agent-generator" },
   { category: "tools", slug: "chrome-extension" },
   { category: "tools", slug: "firefox-addon" },
   { category: "resources", slug: "blog" },

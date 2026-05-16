@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import {
   Activity,
   Braces,
@@ -16,6 +16,7 @@ import {
   HardDrive,
   LayoutDashboard,
   Loader2,
+  Network,
   Server,
   Shield,
   ShoppingCart,
@@ -89,6 +90,26 @@ type DashboardView =
   | "buy"
   | "funds"
   | "developer";
+
+const VIEW_PARAM = "view";
+
+const VIEW_ALIASES: Record<string, DashboardView> = {
+  overview: "overview",
+  proxies: "proxies",
+  "my-proxies": "proxies",
+  buy: "buy",
+  "buy-proxies": "buy",
+  funds: "funds",
+  "add-funds": "funds",
+  developer: "developer",
+  "developer-api": "developer",
+};
+
+function parseDashboardViewParam(raw: string | null): DashboardView {
+  if (!raw) return "overview";
+  const key = raw.trim().toLowerCase();
+  return VIEW_ALIASES[key] ?? "overview";
+}
 
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
@@ -212,9 +233,22 @@ const NAV: {
 
 export function DashboardClient({ initialData }: DashboardClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [balance, setBalance] = useState(initialData.balance);
-  const [view, setView] = useState<DashboardView>("overview");
+  const view = useMemo(
+    () => parseDashboardViewParam(searchParams.get(VIEW_PARAM)),
+    [searchParams]
+  );
+
+  const navigateView = useCallback(
+    (next: DashboardView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(VIEW_PARAM, next);
+      router.push(`/dashboard?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
   const [proxyType, setProxyType] = useState<ProxyProduct>("datacenter");
   const [quantity, setQuantity] = useState("10");
   const [depositAmount, setDepositAmount] = useState("");
@@ -313,7 +347,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       return;
     }
     downloadBlob(
-      `proxynova-proxies-${Date.now()}.txt`,
+      `ipnova-proxies-${Date.now()}.txt`,
       formatProxyList(initialData.proxies),
       "text/plain"
     );
@@ -326,7 +360,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       return;
     }
     downloadBlob(
-      `proxynova-proxies-${Date.now()}.json`,
+      `ipnova-proxies-${Date.now()}.json`,
       proxiesToJson(initialData.proxies),
       "application/json"
     );
@@ -339,7 +373,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       return;
     }
     downloadBlob(
-      `proxynova-proxies-${Date.now()}.csv`,
+      `ipnova-proxies-${Date.now()}.csv`,
       proxiesToCsv(initialData.proxies),
       "text/csv"
     );
@@ -366,10 +400,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       >
         <nav className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
+            <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
             <div>
               <span className="font-heading text-base font-semibold tracking-tight text-white">
-                ProxyNova
+                IP Nova
               </span>
               <p className="text-[10px] text-zinc-500">Enterprise proxy network</p>
             </div>
@@ -428,7 +462,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setView(item.id)}
+                onClick={() => navigateView(item.id)}
                 className={cn(
                   "flex min-w-[9.5rem] shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors lg:min-w-0",
                   active
@@ -915,7 +949,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                           <Button
                             className="mt-4 bg-cyan-500 text-black hover:bg-cyan-400"
                             size="sm"
-                            onClick={() => setView("buy")}
+                            onClick={() => navigateView("buy")}
                           >
                             Buy Proxies
                           </Button>
@@ -1128,7 +1162,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                       </CardHeader>
                       <CardContent>
                         <pre className="max-h-[220px] overflow-auto rounded-lg border border-white/[0.06] bg-black/50 p-3 text-[11px] leading-relaxed text-zinc-300">
-                          {`curl -sS https://api.proxynova.io/v1/proxies \\
+                          {`curl -sS https://api.ipnova.online/v1/proxies \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Accept: application/json"`}
                         </pre>
@@ -1146,7 +1180,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                           {`import requests
 
 r = requests.get(
-    "https://api.proxynova.io/v1/proxies",
+    "https://api.ipnova.online/v1/proxies",
     headers={
         "Authorization": "Bearer YOUR_API_KEY",
         "Accept": "application/json",

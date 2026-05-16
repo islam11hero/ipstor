@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import {
   Bar,
   BarChart,
@@ -56,6 +56,22 @@ const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
 
 type AdminView = "dashboard" | "orders" | "deposits";
+
+const ADMIN_VIEW_PARAM = "view";
+
+const ADMIN_VIEW_ALIASES: Record<string, AdminView> = {
+  dashboard: "dashboard",
+  orders: "orders",
+  deposits: "deposits",
+  "pending-orders": "orders",
+  "pending-deposits": "deposits",
+};
+
+function parseAdminViewParam(raw: string | null): AdminView {
+  if (!raw) return "dashboard";
+  const key = raw.trim().toLowerCase();
+  return ADMIN_VIEW_ALIASES[key] ?? "dashboard";
+}
 
 type AdminPanelProps = {
   deposits: PendingDeposit[];
@@ -155,8 +171,21 @@ export function AdminPanel({
   activeUserCount,
 }: AdminPanelProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [view, setView] = useState<AdminView>("dashboard");
+  const view = useMemo(
+    () => parseAdminViewParam(searchParams.get(ADMIN_VIEW_PARAM)),
+    [searchParams]
+  );
+
+  const navigateView = useCallback(
+    (next: AdminView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(ADMIN_VIEW_PARAM, next);
+      router.push(`/admin?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
   const [fulfillOrderId, setFulfillOrderId] = useState<string | null>(null);
   const [ipAddress, setIpAddress] = useState("");
   const [port, setPort] = useState("");
@@ -247,7 +276,7 @@ export function AdminPanel({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setView(item.id)}
+                onClick={() => navigateView(item.id)}
                 className={cn(
                   "flex min-w-[10rem] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors lg:min-w-0",
                   active

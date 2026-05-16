@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Globe } from "lucide-react";
+import { Suspense } from "react";
+import { Network } from "lucide-react";
 
 import { AdminPanel } from "@/components/admin/admin-panel";
 import { Button } from "@/components/ui/button";
@@ -69,9 +70,9 @@ export default async function AdminPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
+            <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
             <span className="font-heading text-base font-semibold tracking-tight text-white">
-              ProxyNova
+              IP Nova
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -83,11 +84,13 @@ export default async function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <AdminPanel
-          deposits={deposits}
-          orders={orders}
-          activeUserCount={activeUserCount}
-        />
+        <Suspense fallback={null}>
+          <AdminPanel
+            deposits={deposits}
+            orders={orders}
+            activeUserCount={activeUserCount}
+          />
+        </Suspense>
       </main>
     </div>
   );

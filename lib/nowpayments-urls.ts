@@ -1,9 +1,19 @@
-const DEFAULT_SITE = "https://ipstor.vercel.app";
+const DEFAULT_SITE = "https://ipnova.online";
 
+/**
+ * Base URL for NowPayments success / IPN callbacks.
+ * - `NEXT_PUBLIC_SITE_URL` wins when set (e.g. local `http://localhost:3000`).
+ * - On Vercel **production**, use the live custom domain, not `*.vercel.app`.
+ * - Preview deployments keep the deployment URL for isolated testing.
+ */
 export function getSiteBaseUrl(): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (site) {
     return site.replace(/\/$/, "");
+  }
+
+  if (process.env.VERCEL_ENV === "production") {
+    return DEFAULT_SITE;
   }
 
   const vercel = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();

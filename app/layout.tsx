@@ -23,16 +23,16 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "ProxyNova — Enterprise proxy infrastructure",
-    template: "%s | ProxyNova",
+    default: "IP Nova — Enterprise proxy infrastructure",
+    template: "%s | IP Nova",
   },
   description:
-    "Buy proxies, residential IPs, and datacenter proxies from ProxyNova — enterprise-grade infrastructure for data teams, security research, and growth organizations.",
+    "Buy proxies, residential IPs, and datacenter proxies from IP Nova — enterprise-grade infrastructure for data teams, security research, and growth organizations.",
   keywords: [
     "buy proxies",
     "residential IPs",
     "datacenter proxies",
-    "ProxyNova",
+    "IP Nova",
     "enterprise proxies",
     "SOCKS5",
     "HTTP proxy",
@@ -40,17 +40,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "ProxyNova",
+    siteName: "IP Nova",
     url: SITE_URL,
-    title: "ProxyNova — Enterprise proxy infrastructure",
+    title: "IP Nova — Enterprise proxy infrastructure",
     description:
-      "Buy proxies, residential IPs, and datacenter proxies from ProxyNova.",
+      "Buy proxies, residential IPs, and datacenter proxies from IP Nova.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ProxyNova — Enterprise proxy infrastructure",
+    title: "IP Nova — Enterprise proxy infrastructure",
     description:
-      "Buy proxies, residential IPs, and datacenter proxies from ProxyNova.",
+      "Buy proxies, residential IPs, and datacenter proxies from IP Nova.",
   },
 };
 

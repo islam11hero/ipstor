@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Globe } from "lucide-react";
+import { Network } from "lucide-react";
 
 export const metadata = {
   title: "Terms of Service",
-  description: "ProxyNova terms of service for use of our platform and infrastructure.",
+  description: "IP Nova terms of service for use of our platform and infrastructure.",
 };
 
 export default function TermsPage() {
@@ -16,8 +16,8 @@ export default function TermsPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white">
-            <Globe className="h-6 w-6 text-emerald-500" aria-hidden />
-            <span className="font-heading font-semibold text-white">ProxyNova</span>
+            <Network className="h-6 w-6 text-emerald-400" aria-hidden />
+            <span className="font-heading font-semibold text-white">IP Nova</span>
           </Link>
           <Link href="/login" className="text-sm text-zinc-500 hover:text-white">
             Sign in
@@ -29,8 +29,8 @@ export default function TermsPage() {
         <p className="text-sm text-zinc-500">
           Effective: January 1, 2026. These Terms of Service (&ldquo;Terms&rdquo;)
           govern access to and use of the websites, dashboards, APIs, and related
-          offerings provided by ProxyNova, a leading proxy infrastructure provider
-          (&ldquo;ProxyNova,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
+          offerings provided by IP Nova, a leading proxy infrastructure provider
+          (&ldquo;IP Nova,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
           &ldquo;our&rdquo;). By accessing or using the Services, you agree to these
           Terms.
         </p>
@@ -45,7 +45,7 @@ export default function TermsPage() {
 
         <h2>2. The Services</h2>
         <p>
-          ProxyNova provides access to proxy infrastructure and related tools as
+          IP Nova provides access to proxy infrastructure and related tools as
           described on our website and in order documentation. Features, limits,
           and availability may change as we improve the platform; we will use
           commercially reasonable efforts to avoid disruptive changes to committed
@@ -69,7 +69,7 @@ export default function TermsPage() {
         <h2>4. Customer data and privacy</h2>
         <p>
           Our collection and use of personal information is described in the
-          ProxyNova Privacy Policy. You are responsible for ensuring that any
+          IP Nova Privacy Policy. You are responsible for ensuring that any
           personal data you process through the Services complies with applicable
           law and that you have obtained required consents and notices.
         </p>
@@ -84,7 +84,7 @@ export default function TermsPage() {
 
         <h2>6. Intellectual property</h2>
         <p>
-          ProxyNova and its licensors retain all rights in the Services, including
+          IP Nova and its licensors retain all rights in the Services, including
           software, branding, and documentation. Subject to these Terms, we grant you
           a limited, non-exclusive, non-transferable right to access and use the
           Services during your subscription term.
@@ -101,7 +101,7 @@ export default function TermsPage() {
 
         <h2>8. Limitation of liability</h2>
         <p>
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, PROXYNOVA WILL NOT BE LIABLE FOR
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, IP NOVA WILL NOT BE LIABLE FOR
           ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES, OR
           ANY LOSS OF PROFITS, DATA, OR GOODWILL. OUR AGGREGATE LIABILITY ARISING OUT
           OF OR RELATED TO THE SERVICES WILL NOT EXCEED THE GREATER OF (A) THE
@@ -111,7 +111,7 @@ export default function TermsPage() {
 
         <h2>9. Indemnity</h2>
         <p>
-          You will defend and indemnify ProxyNova and its affiliates, officers,
+          You will defend and indemnify IP Nova and its affiliates, officers,
           directors, employees, and agents against any claims, damages, losses, and
           expenses (including reasonable attorneys&apos; fees) arising from your
           use of the Services, your content, or your violation of these Terms.
@@ -129,7 +129,7 @@ export default function TermsPage() {
         <p>
           These Terms are governed by the laws of the State of Delaware, excluding
           conflict-of-law rules, unless a different governing law is specified in a
-          signed enterprise agreement between you and ProxyNova.
+          signed enterprise agreement between you and IP Nova.
         </p>
 
         <h2>12. Changes</h2>
@@ -141,7 +141,7 @@ export default function TermsPage() {
 
         <h2>13. Contact</h2>
         <p>
-          <a href="mailto:legal@proxynova.io">legal@proxynova.io</a>
+          <a href="mailto:legal@ipnova.online">legal@ipnova.online</a>
         </p>
       </article>
     </div>

@@ -1,2 +1,2 @@
-/** Canonical site for metadata, sitemap, and structured data. */
-export const SITE_URL = "https://ipstor.vercel.app";
+/** Canonical public site origin (SEO, JSON-LD, sitemap, metadataBase). */
+export const SITE_URL = "https://ipnova.online";

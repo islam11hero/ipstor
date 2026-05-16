@@ -7,7 +7,7 @@ const jsonLd = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
-      name: "ProxyNova",
+      name: "IP Nova",
       url: SITE_URL,
       description:
         "Enterprise proxy infrastructure — residential IPs, datacenter proxies, and global routing for data and security teams.",
@@ -15,8 +15,8 @@ const jsonLd = {
     {
       "@type": "Product",
       "@id": `${SITE_URL}/#product`,
-      name: "ProxyNova Enterprise Proxies",
-      brand: { "@type": "Brand", name: "ProxyNova" },
+      name: "IP Nova Enterprise Proxies",
+      brand: { "@type": "Brand", name: "IP Nova" },
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "4.9",
