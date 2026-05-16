@@ -136,3 +136,55 @@
     @apply font-heading;
   }
 }
+
+/* Enterprise marketing: deep glass surfaces */
+@layer components {
+  .surface-bento {
+    @apply rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl;
+  }
+
+  .prose-legal {
+    @apply mx-auto max-w-4xl text-[15px] leading-relaxed text-zinc-400;
+  }
+  .prose-legal h1 {
+    @apply mb-2 text-3xl font-semibold tracking-tight text-white;
+  }
+  .prose-legal h2 {
+    @apply mt-12 mb-4 text-xl font-semibold tracking-tight text-white;
+  }
+  .prose-legal h3 {
+    @apply mt-8 mb-3 text-lg font-medium text-zinc-200;
+  }
+  .prose-legal p {
+    @apply mb-4;
+  }
+  .prose-legal ul {
+    @apply mb-4 list-disc space-y-2 pl-6;
+  }
+  .prose-legal li {
+    @apply marker:text-emerald-600/80;
+  }
+  .prose-legal strong {
+    @apply font-medium text-zinc-200;
+  }
+  .prose-legal a {
+    @apply text-emerald-400 underline-offset-4 hover:text-emerald-300;
+  }
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-infinite {
+  animation: marquee-scroll 50s linear infinite;
+}
+
+.will-change-transform {
+  will-change: transform;
+}

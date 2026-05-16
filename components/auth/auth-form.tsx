@@ -91,13 +91,11 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
 
       <Link
         href="/"
-        className="mb-8 flex items-center gap-2 transition-opacity hover:opacity-80"
+        className="mb-8 flex items-center gap-2.5 transition-opacity hover:opacity-80"
       >
-        <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-emerald-500 shadow-lg shadow-cyan-500/20">
-          <Globe className="size-4 text-black" />
-        </div>
-        <span className="text-lg font-semibold tracking-tight">
-          Proxy<span className="text-cyan-400">Nova</span>
+        <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
+        <span className="font-heading text-lg font-semibold tracking-tight text-white">
+          ProxyNova
         </span>
       </Link>
 

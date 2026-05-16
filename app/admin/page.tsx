@@ -41,14 +41,17 @@ export default async function AdminPage() {
 
   const supabase = await getDataClient();
 
-  const [deposits, ordersResult] = await Promise.all([
+  const [deposits, ordersResult, profilesCountResult] = await Promise.all([
     fetchPendingDeposits(supabase),
     supabase
       .from("orders")
       .select("id, user_id, proxy_type, quantity, total_price, created_at")
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
   ]);
+
+  const activeUserCount = profilesCountResult.count ?? 0;
 
   const orders: PendingOrder[] = (
     (ordersResult.data as OrderRow[] | null) ?? []
@@ -62,15 +65,13 @@ export default async function AdminPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-white/5 bg-background/70 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#050505] text-zinc-100">
+      <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-emerald-500">
-              <Globe className="size-4 text-black" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              Proxy<span className="text-cyan-400">Nova</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <Globe className="h-6 w-6 shrink-0 text-emerald-500" aria-hidden />
+            <span className="font-heading text-base font-semibold tracking-tight text-white">
+              ProxyNova
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -82,7 +83,11 @@ export default async function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10">
-        <AdminPanel deposits={deposits} orders={orders} />
+        <AdminPanel
+          deposits={deposits}
+          orders={orders}
+          activeUserCount={activeUserCount}
+        />
       </main>
     </div>
   );
