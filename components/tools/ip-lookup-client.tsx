@@ -52,7 +52,7 @@ export function IpLookupClient() {
   }, []);
 
   return (
-    <main className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+    <div role="main" className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-[radial-gradient(ellipse_65%_50%_at_50%_0%,rgba(16,185,129,0.1),transparent)]"
         aria-hidden
@@ -142,7 +142,7 @@ export function IpLookupClient() {
           </div>
         </>
       )}
-    </main>
+    </div>
   );
 }
 

@@ -133,9 +133,20 @@ export function MarketingHome() {
                 </span>
               </h1>
               <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-zinc-500">
-                Contract-grade datacenter and residential endpoints. One control
-                plane, predictable economics, and formats your automation already
-                understands.
+                IP Nova unifies{" "}
+                <strong className="font-medium text-zinc-300">HTTP</strong>,{" "}
+                <strong className="font-medium text-zinc-300">HTTPS</strong>, and{" "}
+                <strong className="font-medium text-zinc-300">SOCKS5</strong> forward
+                proxies with intelligent{" "}
+                <strong className="font-medium text-zinc-300">IP rotation</strong>,
+                sticky sessions for checkout realism, and honest guidance on{" "}
+                <strong className="font-medium text-zinc-300">concurrent connections</strong>{" "}
+                so your workers do not trip global rate limits. Route production scraping,
+                SERP intelligence, and ad verification through residential and datacenter
+                pools—or pair with{" "}
+                <strong className="font-medium text-zinc-300">anti-detect browsers</strong>{" "}
+                using SOCKS5—while finance sees one vendor, one SLA track, and one security
+                review artifact.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-3">
                 <Button

@@ -170,6 +170,26 @@
   .prose-legal a {
     @apply text-emerald-400 underline-offset-4 hover:text-emerald-300;
   }
+
+  /* Long-form SEO articles (tools + programmatic pages) */
+  .prose-seo-invert {
+    @apply mx-auto max-w-4xl text-[15px] leading-[1.8] text-zinc-400;
+  }
+  .prose-seo-invert h2 {
+    @apply mb-6 mt-14 font-heading text-2xl font-semibold tracking-tight text-white first:mt-0;
+  }
+  .prose-seo-invert p {
+    @apply mb-5 text-pretty;
+  }
+  .prose-seo-invert ul {
+    @apply mb-5 list-disc space-y-2 pl-6 text-zinc-400;
+  }
+  .prose-seo-invert li {
+    @apply marker:text-emerald-600/80;
+  }
+  .prose-seo-invert strong {
+    @apply font-medium text-zinc-200;
+  }
 }
 
 @keyframes marquee-scroll {

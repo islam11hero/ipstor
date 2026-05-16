@@ -41,7 +41,7 @@ export function ProxyTesterClient() {
   }, [rows]);
 
   return (
-    <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+    <div role="main" className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(34,211,238,0.08),transparent)]"
         aria-hidden
@@ -161,6 +161,6 @@ export function ProxyTesterClient() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

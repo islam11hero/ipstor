@@ -3,7 +3,8 @@ import { Network } from "lucide-react";
 
 export const metadata = {
   title: "About",
-  description: "Learn about IP Nova and our mission in enterprise proxy infrastructure.",
+  description:
+    "IP Nova builds enterprise proxy infrastructure with ethical IP sourcing, KYC-aligned programs, HTTP/HTTPS/SOCKS5 protocol parity, and global routing for B2B automation teams.",
 };
 
 export default function AboutPage() {
@@ -26,38 +27,115 @@ export default function AboutPage() {
       </header>
       <article className="prose-legal px-6 py-16 lg:py-24">
         <h1>About IP Nova</h1>
-        <p>
-          IP Nova is a leading proxy infrastructure provider, delivering
-          datacenter and residential endpoints to organizations that depend on
-          reliable, ethically sourced network access for data acquisition, ad
-          verification, security research, and large-scale automation.
+        <p className="text-sm text-zinc-500">
+          Last updated for enterprise readers: transparency, sourcing posture, and how
+          we support HTTP/HTTPS/SOCKS5 automation at scale.
         </p>
         <p>
-          We operate with the assumption that our customers run production
-          workloads: latency, session semantics, and billing clarity are treated
-          as first-class product requirements—not afterthoughts buried in support
-          tickets.
+          IP Nova is an infrastructure company focused on forward proxy networks for
+          B2B teams—data science, growth engineering, security research, fraud
+          operations, and platform integrity groups—who cannot afford ambiguous
+          marketing or opaque acceptable-use policies. We provide residential, ISP,
+          datacenter, and mobile carrier egress with protocol parity across HTTP,
+          HTTPS, and SOCKS5 so polyglot organizations can standardize credentials
+          across scrapers, anti-detect browsers, CI jobs, and internal tools without
+          maintaining parallel vendor relationships for each transport.
         </p>
-        <h2>What we build</h2>
         <p>
-          Our platform couples a modern control plane with a globally distributed
-          footprint. Teams receive credentials in industry-standard formats,
-          integrate through predictable APIs, and scale consumption as their
-          programs mature from experimentation to always-on pipelines.
+          Our product thesis is simple: proxies are routing and identity infrastructure,
+          not a commodity listicle of country flags. That means we invest in ASN
+          metadata, realistic concurrency guidance, intelligent IP rotation controls,
+          and subnet hygiene programs that protect shared reputation. It also means we
+          publish integration guidance that acknowledges HTTP/2 client defaults, TLS
+          fingerprint realities, and the nonlinear relationship between concurrent
+          connections and global rate limits. When customers evaluate IP Nova against
+          alternatives, we want the decision to be made on engineering evidence—latency
+          envelopes, incident timelines, and subprocessors—not on inflated IP counts
+          that disintegrate under production load.
         </p>
-        <h2>How we work with customers</h2>
+        <h2>Ethical IP sourcing and partner accountability</h2>
         <p>
-          IP Nova engages with data science, growth, and security teams that
-          require contractual clarity, documented acceptable use, and responsive
-          technical partnership. Enterprise customers may access volume pricing,
-          custom routing policies, and dedicated onboarding.
+          Residential and mobile IP pools carry higher trust signals because they map
+          to consumer eyeballs—but that trust must be earned through consent, contract,
+          and ongoing monitoring, not through undisclosed SDK bundling. IP Nova contracts
+          require informed participation from supply partners, prohibit deceptive
+          collection, and include technical controls to detect anomalous traffic that
+          could harm subnet reputation for all customers. We refuse traffic classes that
+          create unacceptable legal or carrier risk, and we maintain documentation that
+          maps sourcing chains for enterprise security reviews.
+        </p>
+        <p>
+          Datacenter inventory is sourced from reputable hosting and backbone providers
+          with clear ASN ownership. We isolate abusive tenants, throttle noisy workloads,
+          and offer dedicated ranges for enterprises that require stronger blast-radius
+          guarantees than shared subnets can provide. Across all classes, we align
+          customer expectations with physics: mobile radio networks cannot deliver
+          datacenter microseconds; residential pools cannot sustain naive infinite QPS
+          without reputation decay. Honest guidance is part of ethical operations
+          because misconfigured automation harms everyone on a shared pool.
+        </p>
+        <h2>KYC compliance and high-risk commercial programs</h2>
+        <p>
+          Certain SKUs—especially carrier-backed mobile programs and high-throughput
+          residential commitments—require commercially reasonable Know Your Customer
+          (KYC) checks to satisfy partner contracts and regulatory expectations. KYC at
+          IP Nova is scoped: we collect what is necessary to validate business identity
+          and intended use, retain it according to documented schedules, and restrict
+          access on a least-privilege basis. We do not use KYC as a pretext for unrelated
+          data harvesting; procurement and legal teams receive clear data maps instead
+          of vague “trust us” statements.
+        </p>
+        <p>
+          Enterprise customers may also require custom MSA terms, insurance artifacts,
+          or dedicated support channels. IP Nova maintains a commercial desk that speaks
+          the same vocabulary as finance (commit sizes, true-ups, SLAs) and engineering
+          (rotation semantics, protocol endpoints, logging fields). Our goal is to shorten
+          the distance between security questionnaire answers and the behavior of the
+          live control plane—because E-E-A-T is demonstrated by operators who can explain
+          failure modes before purchase, not after an incident.
+        </p>
+        <h2>Global infrastructure and observability</h2>
+        <p>
+          IP Nova operates a globally distributed edge with regional control planes,
+          encrypted management channels, and status communications that treat partial
+          degradation as a normal part of running networks at scale. We publish guidance
+          for integrating retries, backoff, and circuit breaking at the application
+          layer—because proxies sit on the critical path between your workers and revenue.
+          Observability hooks include per-pool health indicators and incident postmortems
+          that name contributing factors rather than hiding behind generic “network
+          issues” banners.
+        </p>
+        <p>
+          For teams combining automation with anti-detect browsers, we document SOCKS5
+          and HTTP CONNECT caveats, header consistency recommendations, and concurrency
+          patterns that reduce accidental correlation across workers. For large scraping
+          programs, we help model the interaction of intelligent IP rotation with session
+          stickiness so customers do not destroy their own success rates by toggling
+          policies without measurement.
+        </p>
+        <h2>Security, retention, and customer trust</h2>
+        <p>
+          Security at IP Nova follows defense-in-depth: network segmentation, encrypted
+          transit for management operations, strict access controls on production data
+          stores, and routine review of subprocessors that touch customer metadata. We
+          separate billing artifacts from technical logs where feasible, support scoped
+          API keys for automation, and document retention windows so your DPO can align
+          internal records policies with ours. Vulnerability reports are triaged by
+          engineers with authority to patch—not routed into a black hole inbox.
+        </p>
+        <p>
+          We believe long-form transparency improves outcomes: customers who understand
+          how HTTP/HTTPS/SOCKS5 paths are terminated, how concurrent connections interact
+          with pool health, and how ethical IP sourcing maps to subnet reputation behave
+          like partners rather than adversaries. That alignment is how IP Nova sustains
+          B2B programs with 99.9% SLAs where commercially reasonable—because SLAs are
+          meaningless without operational maturity on both sides of the contract.
         </p>
         <h2>Contact</h2>
         <p>
           For general inquiries and partnership discussions, contact{" "}
           <a href="mailto:hello@ipnova.online">hello@ipnova.online</a>. For legal
-          matters, contact <a href="mailto:legal@ipnova.online">legal@ipnova.online</a>
-          .
+          matters, contact <a href="mailto:legal@ipnova.online">legal@ipnova.online</a>.
         </p>
       </article>
     </div>
