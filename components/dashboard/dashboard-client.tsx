@@ -18,11 +18,9 @@ import {
   Braces,
   Building2,
   Check,
-  CheckCircle2,
+  ClipboardList,
   Copy,
   Download,
-  Eye,
-  EyeOff,
   Flame,
   Globe,
   Globe2,
@@ -35,7 +33,6 @@ import {
   Monitor,
   Music,
   Network,
-  RefreshCw,
   Send,
   Server,
   Shield,
@@ -87,8 +84,11 @@ import {
 } from "@/lib/motion";
 import {
   calculateOrderTotal,
-  DATACENTER_PRICE_PER_IP,
-  RESIDENTIAL_PRICE_PER_GB,
+  formatProductQuantityLabel,
+  formatProductTypeLabel,
+  formatProductUnitPrice,
+  getProduct,
+  PROXY_PRODUCTS,
   type ProxyProduct,
 } from "@/lib/pricing";
 import { formatProxyLine, formatProxyList } from "@/lib/proxy-format";
@@ -104,9 +104,21 @@ type DashboardView =
   | "overview"
   | "proxies"
   | "buy"
+  | "orders"
   | "funds"
   | "developer"
   | "affiliate";
+
+const PRODUCT_ICONS: Record<
+  ProxyProduct,
+  React.ComponentType<{ className?: string }>
+> = {
+  datacenter: Server,
+  residential: Globe,
+  static_residential: Building2,
+  isp: Network,
+  mobile: Smartphone,
+};
 
 const VIEW_PARAM = "view";
 
@@ -115,10 +127,16 @@ const VIEW_ALIASES: Record<string, DashboardView> = {
   proxies: "proxies",
   "my-proxies": "proxies",
   "proxy-list": "proxies",
-  datacenter: "proxies",
-  residential: "proxies",
+  datacenter: "buy",
+  residential: "buy",
+  "static-residential": "buy",
+  static_residential: "buy",
+  isp: "buy",
+  mobile: "buy",
   buy: "buy",
   "buy-proxies": "buy",
+  orders: "orders",
+  "my-orders": "orders",
   funds: "funds",
   billing: "funds",
   "top-up": "funds",
@@ -135,6 +153,7 @@ const VIEW_QUERY_SLUG: Record<DashboardView, string> = {
   overview: "overview",
   proxies: "my-proxies",
   buy: "buy-proxies",
+  orders: "my-orders",
   funds: "billing",
   developer: "developer-api",
   affiliate: "affiliate",
@@ -160,21 +179,8 @@ const SETUP_GUIDE_ITEMS: {
   { icon: Shield, label: "GoLogin" },
 ];
 
-const SKILL_INSTALL_CMD = "npx skills add ipnova/proxy-manager";
-const SKILL_PROMPT_SNIPPET =
-  "Using the IP Nova skill, pull the top 20 Google SERPs from the US, UK, Germany...";
-
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
-
-const MOCK_API_KEY = "pn_live_sk_7x9K2mP4vQ8wZ1nL5bH3cF6jD0sA2eR8uY1";
-
-const AFFILIATE_DEMO_ROWS = [
-  { at: "2026-05-14T18:22:00.000Z", masked: "usr_***a3f", commission: 42.5 },
-  { at: "2026-05-12T09:10:00.000Z", masked: "usr_***91c", commission: 18.0 },
-  { at: "2026-05-09T14:45:00.000Z", masked: "usr_***7de", commission: 64.25 },
-  { at: "2026-05-02T11:02:00.000Z", masked: "usr_***502", commission: 12.0 },
-] as const;
 
 const viewTransition = {
   initial: { opacity: 0, x: 16 },
@@ -208,6 +214,10 @@ function formatCurrency(amount: number) {
     style: "currency",
     currency: "USD",
   }).format(amount);
+}
+
+function shortOrderId(id: string) {
+  return id.slice(0, 8);
 }
 
 function formatDate(iso: string) {
@@ -274,17 +284,34 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
   const [quantity, setQuantity] = useState("10");
   const [depositAmount, setDepositAmount] = useState("");
   const [cryptoPayLoading, setCryptoPayLoading] = useState(false);
-  const [whitelistDraft, setWhitelistDraft] = useState(
-    "203.0.113.0/24, 198.51.100.10"
-  );
-  const [apiKeyRevealed, setApiKeyRevealed] = useState(false);
-  const [payYearly, setPayYearly] = useState(false);
-  const [aiAgentTab, setAiAgentTab] = useState<
-    "seo" | "ad" | "streaming" | "social"
-  >("seo");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedButtonId, setCopiedButtonId] = useState<string | null>(null);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const selectedProduct = useMemo(() => getProduct(proxyType)!, [proxyType]);
+
+  const pendingOrdersCount = useMemo(
+    () => initialData.orders.filter((order) => order.status === "pending").length,
+    [initialData.orders]
+  );
+
+  useEffect(() => {
+    const raw = searchParams.get(VIEW_PARAM)?.trim().toLowerCase();
+    if (!raw) return;
+    const productKeys: ProxyProduct[] = [
+      "datacenter",
+      "residential",
+      "static_residential",
+      "isp",
+      "mobile",
+    ];
+    if (productKeys.includes(raw as ProxyProduct)) {
+      setProxyType(raw as ProxyProduct);
+    }
+    if (raw === "static-residential") {
+      setProxyType("static_residential");
+    }
+  }, [searchParams]);
 
   const goView = useCallback(
     (next: DashboardView) => {
@@ -292,6 +319,14 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
       setSidebarOpen(false);
     },
     [navigateView]
+  );
+
+  const goBuyProduct = useCallback(
+    (product: ProxyProduct) => {
+      setProxyType(product);
+      goView("buy");
+    },
+    [goView]
   );
 
   const goBilling = useCallback(() => {
@@ -360,8 +395,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
       }
 
       toast.success(
-        "Order placed successfully. Proxies will appear once fulfilled by our team."
+        "Order placed. Track fulfillment status under My orders — proxies appear once our team delivers them."
       );
+      goView("orders");
       refresh();
     });
   }
@@ -429,10 +465,6 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
       "text/plain"
     );
     toast.success("Downloaded .TXT");
-  }
-
-  function handleSaveWhitelistMock() {
-    toast.success("IP whitelist saved (preview — not persisted).");
   }
 
   return (
@@ -576,42 +608,31 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     ACTIVE
                   </Badge>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => goView("proxies")}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
-                    view === "proxies"
-                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
-                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
-                  )}
-                >
-                  <HardDrive
-                    className={cn(
-                      "size-4 shrink-0",
-                      view === "proxies" ? "text-emerald-400" : "text-zinc-500"
-                    )}
-                  />
-                  Datacenter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goView("proxies")}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
-                    view === "proxies"
-                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
-                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
-                  )}
-                >
-                  <Wifi
-                    className={cn(
-                      "size-4 shrink-0",
-                      view === "proxies" ? "text-emerald-400" : "text-zinc-500"
-                    )}
-                  />
-                  Residential
-                </button>
+                {PROXY_PRODUCTS.map((product) => {
+                  const Icon = PRODUCT_ICONS[product.id];
+                  const buying = view === "buy" && proxyType === product.id;
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => goBuyProduct(product.id)}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                        buying
+                          ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                          : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "size-4 shrink-0",
+                          buying ? "text-emerald-400" : "text-zinc-500"
+                        )}
+                      />
+                      {product.shortLabel}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -619,7 +640,30 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
               <p className="mt-6 mb-2 px-3 text-[10px] font-bold tracking-widest text-zinc-500 uppercase lg:mt-6">
                 Workspace
               </p>
-              <div className="mt-0 flex flex-col gap-0.5 lg:mt-0">
+              <motion.div className="mt-0 flex flex-col gap-0.5 lg:mt-0">
+                <button
+                  type="button"
+                  onClick={() => goView("orders")}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "orders"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <ClipboardList
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "orders" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  <span className="min-w-0 flex-1">My orders</span>
+                  {pendingOrdersCount > 0 ? (
+                    <Badge className="ml-auto h-4 border-none bg-amber-500/15 px-1.5 text-[10px] font-semibold leading-none text-amber-300">
+                      {pendingOrdersCount}
+                    </Badge>
+                  ) : null}
+                </button>
                 <button
                   type="button"
                   onClick={() => goView("funds")}
@@ -656,7 +700,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   />
                   Affiliate Program
                 </button>
-              </div>
+              </motion.div>
             </div>
 
             <div className="w-full">
@@ -736,107 +780,90 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   initial="hidden"
                   animate="show"
                 >
-                  {/* Section A — Most popular plans */}
+                  {/* Section A — Live products */}
                   <motion.section variants={bentoItem} className="space-y-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h2 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                          Most popular plans
-                        </h2>
-                        <p className="mt-1 text-sm text-zinc-500">
-                          Enterprise-grade throughput with dedicated routing and
-                          SLA-backed infrastructure.
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-xs font-medium text-zinc-400">
-                          Pay yearly
-                        </span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={payYearly}
-                          onClick={() => setPayYearly((v) => !v)}
-                          className={cn(
-                            "relative h-7 w-12 rounded-full border transition-colors",
-                            payYearly
-                              ? "border-emerald-500/40 bg-emerald-500/20"
-                              : "border-white/10 bg-white/[0.04]"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform",
-                              payYearly ? "translate-x-5" : "translate-x-0"
-                            )}
-                          />
-                        </button>
-                        <span className="ml-2 rounded bg-fuchsia-500/20 px-2 py-0.5 text-xs font-bold text-fuchsia-300">
-                          SAVE 30%
-                        </span>
-                      </div>
+                    <div>
+                      <h2 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                        Available products
+                      </h2>
+                      <p className="mt-1 text-sm text-zinc-500">
+                        Current catalog pricing — orders debit your wallet balance
+                        instantly.
+                      </p>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                      {[
-                        {
-                          title: "Proxy Server",
-                          Icon: Server,
-                          specs: ["100 Proxies", "250 GB Bandwidth"],
-                          price: payYearly ? "$24.99 /yr" : "$2.99 /mo",
-                        },
-                        {
-                          title: "Static Residential",
-                          Icon: Building2,
-                          specs: ["50 Dedicated IPs", "Unmetered sessions"],
-                          price: payYearly ? "$89.99 /yr" : "$9.99 /mo",
-                        },
-                        {
-                          title: "Rotating Residential",
-                          Icon: RefreshCw,
-                          specs: ["10M+ pool", "Country-level targeting"],
-                          price: payYearly ? "$119.99 /yr" : "$14.99 /mo",
-                        },
-                      ].map((plan) => (
-                        <div
-                          key={plan.title}
-                          className="rounded-xl border border-white/5 bg-white/[0.02] p-6"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
-                              <plan.Icon className="size-5 text-emerald-400" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-heading text-base font-semibold text-white">
-                                {plan.title}
-                              </h3>
-                              <ul className="mt-3 space-y-2">
-                                {plan.specs.map((s) => (
-                                  <li
-                                    key={s}
-                                    className="flex items-center gap-2 text-sm text-zinc-400"
-                                  >
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      {PROXY_PRODUCTS.map((product) => {
+                        const Icon = PRODUCT_ICONS[product.id];
+                        return (
+                          <div
+                            key={product.id}
+                            className="rounded-xl border border-white/5 bg-white/[0.02] p-6"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
+                                <Icon className="size-5 text-emerald-400" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-heading text-base font-semibold text-white">
+                                  {product.label}
+                                </h3>
+                                <ul className="mt-3 space-y-2">
+                                  <li className="flex items-center gap-2 text-sm text-zinc-400">
                                     <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                                    {s}
+                                    {formatProductUnitPrice(product)}
                                   </li>
-                                ))}
-                              </ul>
-                              <p className="mt-4 font-mono text-lg font-semibold tracking-tight text-white">
-                                {plan.price}
-                              </p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-4 w-full border-emerald-500/40 bg-transparent text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                                onClick={() => goBilling()}
-                              >
-                                Get Started
-                              </Button>
+                                  <li className="flex items-center gap-2 text-sm text-zinc-400">
+                                    <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                                    Manual fulfillment after order
+                                  </li>
+                                </ul>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-4 w-full border-emerald-500/40 bg-transparent text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                  onClick={() => goBuyProduct(product.id)}
+                                >
+                                  Order now
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
+                    <Card className={cn(shellGlass)}>
+                      <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-zinc-500">Wallet balance</p>
+                          <p className="font-mono text-2xl font-semibold text-white">
+                            {formatCurrency(balance)}
+                          </p>
+                          <p className="mt-1 text-sm text-zinc-500">
+                            {activeProxies > 0
+                              ? `${activeProxies} active proxy line${activeProxies === 1 ? "" : "s"}`
+                              : "No active proxies yet"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="border-white/12"
+                            onClick={() => goView("proxies")}
+                          >
+                            My proxies
+                          </Button>
+                          <Button
+                            type="button"
+                            className="bg-emerald-500 text-black hover:bg-emerald-400"
+                            onClick={() => goBilling()}
+                          >
+                            Add funds
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </motion.section>
 
                   {/* Section B — Setup guides */}
@@ -852,115 +879,17 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
                       {SETUP_GUIDE_ITEMS.map(({ icon: Icon, label }) => (
-                        <button
+                        <Link
                           key={label}
-                          type="button"
-                          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center transition-all hover:bg-white/[0.08]"
+                          href="/tools"
+                          className="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center transition-all hover:bg-white/[0.08]"
                         >
                           <Icon className="size-8 text-zinc-300" />
                           <span className="text-xs font-medium text-zinc-400">
                             {label}
                           </span>
-                        </button>
+                        </Link>
                       ))}
-                    </div>
-                  </motion.section>
-
-                  {/* Section C — AI agent */}
-                  <motion.section variants={bentoItem} className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                        Use IP Nova with your AI agent
-                      </h2>
-                      <Badge className="border-0 bg-emerald-500/20 text-emerald-400">
-                        New
-                      </Badge>
-                    </div>
-                    <p className="max-w-3xl text-sm text-zinc-500">
-                      One command to drop the IP Nova skill into Claude, Gemini,
-                      Codex, and 40+ other agents.
-                    </p>
-
-                    <div className="flex flex-wrap gap-6 border-b border-white/10 text-sm font-medium">
-                      {(
-                        [
-                          ["seo", "SEO Monitoring"],
-                          ["ad", "Ad Verification"],
-                          ["streaming", "Streaming QA"],
-                          ["social", "Social Monitoring"],
-                        ] as const
-                      ).map(([id, label]) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => setAiAgentTab(id)}
-                          className={cn(
-                            "-mb-px border-b-2 pb-3 transition-colors",
-                            aiAgentTab === id
-                              ? "border-emerald-500 text-emerald-400"
-                              : "border-transparent text-zinc-500 hover:text-zinc-300"
-                          )}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="rounded-xl border border-white/10 bg-black p-6 font-mono text-sm">
-                      <p className="mb-2 text-zinc-500">1. Install the skill</p>
-                      <div className="mb-6 flex flex-col gap-3 rounded border border-white/5 bg-[#0a0a0a] p-3 text-emerald-400 sm:flex-row sm:items-center sm:justify-between">
-                        <pre className="min-w-0 max-w-full flex-1 overflow-x-auto whitespace-nowrap text-sm">{`$ ${SKILL_INSTALL_CMD}`}</pre>
-                        <button
-                          type="button"
-                          className="shrink-0 text-zinc-500 hover:text-zinc-300"
-                          aria-label="Copy install command"
-                          onClick={() =>
-                            void copyWithFeedback(
-                              "skill-cmd",
-                              SKILL_INSTALL_CMD,
-                              "Install command"
-                            )
-                          }
-                        >
-                          {copiedButtonId === "skill-cmd" ? (
-                            <Check className="size-4 text-emerald-400" />
-                          ) : (
-                            <Copy className="size-4" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="mb-2 text-zinc-500">2. Try this prompt</p>
-                      <div className="flex flex-col gap-3 rounded border border-white/5 bg-[#0a0a0a] p-4 text-zinc-300 sm:flex-row sm:items-start sm:justify-between">
-                        <pre className="min-w-0 max-w-full flex-1 overflow-x-auto whitespace-nowrap leading-relaxed text-sm">{`> ${SKILL_PROMPT_SNIPPET}`}</pre>
-                        <button
-                          type="button"
-                          className="mt-0 shrink-0 self-end text-zinc-500 hover:text-zinc-300 sm:mt-1 sm:self-start"
-                          aria-label="Copy prompt"
-                          onClick={() =>
-                            void copyWithFeedback(
-                              "skill-prompt",
-                              SKILL_PROMPT_SNIPPET,
-                              "Prompt"
-                            )
-                          }
-                        >
-                          {copiedButtonId === "skill-prompt" ? (
-                            <Check className="size-4 text-emerald-400" />
-                          ) : (
-                            <Copy className="size-4" />
-                          )}
-                        </button>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-4 text-sm text-zinc-400">
-                        <span>
-                          <CheckCircle2 className="mr-1 inline size-4 text-emerald-500" />
-                          Per-country ranking diff
-                        </span>
-                        <span>
-                          <CheckCircle2 className="mr-1 inline size-4 text-emerald-500" />
-                          Competitor movement ranked
-                        </span>
-                      </div>
                     </div>
                   </motion.section>
                 </motion.div>
@@ -968,23 +897,18 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
 
               {view === "buy" && (
                 <div className="space-y-6">
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <ProductCard
-                      title="Datacenter"
-                      priceLabel={`$${DATACENTER_PRICE_PER_IP.toFixed(2)}/IP`}
-                      description="High-speed dedicated IPs for automation, scraping, and bulk tasks."
-                      icon={Server}
-                      selected={proxyType === "datacenter"}
-                      onSelect={() => setProxyType("datacenter")}
-                    />
-                    <ProductCard
-                      title="Residential"
-                      priceLabel={`$${RESIDENTIAL_PRICE_PER_GB.toFixed(2)}/GB`}
-                      description="Real residential IPs for strict anti-bot and geo-targeted use cases."
-                      icon={Globe}
-                      selected={proxyType === "residential"}
-                      onSelect={() => setProxyType("residential")}
-                    />
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {PROXY_PRODUCTS.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        title={product.shortLabel}
+                        priceLabel={formatProductUnitPrice(product)}
+                        description={product.description}
+                        icon={PRODUCT_ICONS[product.id]}
+                        selected={proxyType === product.id}
+                        onSelect={() => setProxyType(product.id)}
+                      />
+                    ))}
                   </div>
 
                   <div className="grid gap-6 lg:grid-cols-2">
@@ -992,7 +916,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       <CardHeader>
                         <CardTitle>Order calculator</CardTitle>
                         <CardDescription className="text-zinc-500">
-                          {proxyType === "datacenter"
+                          {selectedProduct.unit === "ip"
                             ? "Enter the number of IPs you need."
                             : "Enter the bandwidth in gigabytes (GB)."}
                         </CardDescription>
@@ -1000,7 +924,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="quantity">
-                            {proxyType === "datacenter"
+                            {selectedProduct.unit === "ip"
                               ? "Quantity (IPs)"
                               : "Quantity (GB)"}
                           </Label>
@@ -1008,12 +932,16 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                             id="quantity"
                             type="number"
                             min={1}
-                            step={proxyType === "datacenter" ? 1 : 0.1}
+                            step={selectedProduct.unit === "ip" ? 1 : 0.1}
                             value={quantity}
                             onChange={(e) => setQuantity(e.target.value)}
                             className="border-white/10 bg-zinc-950/80"
                           />
                         </div>
+                        <p className="text-xs text-zinc-500">
+                          All products are manually provisioned by our team after
+                          payment. Track status in My orders.
+                        </p>
                         <motion.div className="w-full" {...hoverLift} {...tapScale}>
                           <Button
                             className="w-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black shadow-lg shadow-cyan-500/20 hover:from-emerald-300 hover:to-cyan-300"
@@ -1046,38 +974,42 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                         <CardHeader>
                           <CardTitle>Order summary</CardTitle>
                           <CardDescription className="text-zinc-500">
-                            Live pricing — no hidden fees
+                            Live pricing — manual delivery after operator review
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div className="space-y-3 text-sm">
-                            <div className="flex justify-between">
+                            <p className="flex justify-between">
                               <span className="text-zinc-500">Product</span>
-                              <span className="font-medium capitalize">{proxyType}</span>
-                            </div>
-                            <div className="flex justify-between">
+                              <span className="font-medium">
+                                {formatProductTypeLabel(proxyType)}
+                              </span>
+                            </p>
+                            <p className="flex justify-between">
                               <span className="text-zinc-500">Quantity</span>
                               <span className="font-medium">
-                                {parsedQuantity || "—"}
+                                {parsedQuantity
+                                  ? formatProductQuantityLabel(
+                                      selectedProduct,
+                                      parsedQuantity
+                                    )
+                                  : "—"}
                               </span>
-                            </div>
-                            <div className="flex justify-between">
+                            </p>
+                            <p className="flex justify-between">
                               <span className="text-zinc-500">Unit price</span>
                               <span className="font-medium">
-                                {proxyType === "datacenter"
-                                  ? formatCurrency(DATACENTER_PRICE_PER_IP)
-                                  : formatCurrency(RESIDENTIAL_PRICE_PER_GB)}
-                                {proxyType === "datacenter" ? "/IP" : "/GB"}
+                                {formatProductUnitPrice(selectedProduct)}
                               </span>
-                            </div>
+                            </p>
                             <Separator className="bg-white/10" />
-                            <div className="flex justify-between text-base">
+                            <p className="flex justify-between text-base">
                               <span className="font-medium">Total</span>
                               <span className="text-xl font-bold text-cyan-300">
                                 {formatCurrency(orderTotal)}
                               </span>
-                            </div>
-                            <div className="flex justify-between text-xs">
+                            </p>
+                            <p className="flex justify-between text-xs">
                               <span className="text-zinc-500">Your balance</span>
                               <span
                                 className={cn(
@@ -1088,12 +1020,93 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                               >
                                 {formatCurrency(balance)}
                               </span>
-                            </div>
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
                     </motion.div>
                   </div>
+                </div>
+              )}
+
+              {view === "orders" && (
+                <div className="space-y-6">
+                  <Card className={cn(shellGlass, "overflow-hidden")}>
+                    <CardHeader>
+                      <CardTitle className="font-heading text-xl text-white">
+                        My orders
+                      </CardTitle>
+                      <CardDescription className="text-zinc-500">
+                        Track pending and completed purchases. Proxies appear in My
+                        proxies once an operator fulfills your order.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 sm:px-6">
+                      {initialData.orders.length === 0 ? (
+                        <p className="px-6 pb-6 text-center text-sm text-zinc-500">
+                          No orders yet.{" "}
+                          <button
+                            type="button"
+                            className="text-emerald-400 underline-offset-2 hover:underline"
+                            onClick={() => goView("buy")}
+                          >
+                            Buy proxies
+                          </button>{" "}
+                          to get started.
+                        </p>
+                      ) : (
+                        <ScrollArea className="max-h-[520px]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-white/[0.06] hover:bg-transparent">
+                                <TableHead className="text-zinc-400">Date</TableHead>
+                                <TableHead className="text-zinc-400">Order</TableHead>
+                                <TableHead className="text-zinc-400">Product</TableHead>
+                                <TableHead className="text-zinc-400">Qty</TableHead>
+                                <TableHead className="text-zinc-400">Total</TableHead>
+                                <TableHead className="text-right text-zinc-400">Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {initialData.orders.map((order) => {
+                                const product = getProduct(order.proxy_type);
+                                return (
+                                  <TableRow
+                                    key={order.id}
+                                    className="border-white/[0.06] hover:bg-white/[0.02]"
+                                  >
+                                    <TableCell className="font-mono text-xs text-zinc-400">
+                                      {formatDate(order.created_at)}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs text-zinc-300">
+                                      {shortOrderId(order.id)}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-zinc-200">
+                                      {formatProductTypeLabel(order.proxy_type)}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-zinc-300">
+                                      {product
+                                        ? formatProductQuantityLabel(
+                                            product,
+                                            order.quantity
+                                          )
+                                        : order.quantity}
+                                    </TableCell>
+                                    <TableCell className="font-medium text-emerald-200/90">
+                                      {formatCurrency(order.total_price)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <OrderStatusBadge status={order.status} />
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
@@ -1252,34 +1265,6 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     </CardContent>
                   </Card>
 
-                  <Card className={cn(shellGlass)}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">IP whitelist</CardTitle>
-                      <CardDescription className="text-zinc-500">
-                        Restrict outbound sessions to trusted ranges (preview UI).
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <Label htmlFor="whitelist">Allowed CIDRs / IPs</Label>
-                        <Input
-                          id="whitelist"
-                          value={whitelistDraft}
-                          onChange={(e) => setWhitelistDraft(e.target.value)}
-                          placeholder="203.0.113.0/24, 198.51.100.10"
-                          className="border-white/10 bg-zinc-950/80 font-mono text-sm"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10"
-                        onClick={handleSaveWhitelistMock}
-                      >
-                        Save whitelist
-                      </Button>
-                    </CardContent>
-                  </Card>
                 </div>
               )}
 
@@ -1288,7 +1273,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   initial={fadeInUp.initial}
                   animate={fadeInUp.animate}
                   transition={defaultTransition}
-                  className="mx-auto max-w-lg"
+                  className="mx-auto max-w-2xl space-y-6"
                 >
                   <Card
                     className={cn(
@@ -1349,6 +1334,60 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       </form>
                     </CardContent>
                   </Card>
+
+                  <Card className={cn(shellGlass)}>
+                    <CardHeader>
+                      <CardTitle className="font-heading text-lg">
+                        Deposit history
+                      </CardTitle>
+                      <CardDescription className="text-zinc-500">
+                        Your crypto top-ups and their approval status.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 sm:px-6">
+                      {initialData.deposits.length === 0 ? (
+                        <p className="px-6 pb-6 text-center text-sm text-zinc-500">
+                          No deposits yet. Add funds above to get started.
+                        </p>
+                      ) : (
+                        <ScrollArea className="max-h-[320px]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-white/[0.06] hover:bg-transparent">
+                                <TableHead className="text-zinc-400">Date</TableHead>
+                                <TableHead className="text-zinc-400">Amount</TableHead>
+                                <TableHead className="text-zinc-400">TXID</TableHead>
+                                <TableHead className="text-right text-zinc-400">
+                                  Status
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {initialData.deposits.map((deposit) => (
+                                <TableRow
+                                  key={deposit.id}
+                                  className="border-white/[0.06] hover:bg-white/[0.02]"
+                                >
+                                  <TableCell className="font-mono text-xs text-zinc-400">
+                                    {formatDate(deposit.created_at)}
+                                  </TableCell>
+                                  <TableCell className="font-medium text-emerald-200/90">
+                                    {formatCurrency(deposit.amount)}
+                                  </TableCell>
+                                  <TableCell className="max-w-[140px] truncate font-mono text-xs text-zinc-500 sm:max-w-[200px]">
+                                    {deposit.txid}
+                                  </TableCell>
+                                  <TableCell className="text-right text-sm capitalize text-zinc-300">
+                                    {deposit.status}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      )}
+                    </CardContent>
+                  </Card>
                 </motion.div>
               )}
 
@@ -1398,8 +1437,8 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                           Your referral link
                         </CardTitle>
                         <CardDescription className="text-zinc-500">
-                          Anyone who lands on this URL has your code stored locally until
-                          they register—perfect for docs, demos, and conference swag.
+                          Share this link so signups are attributed to your account when
+                          the affiliate program is enabled.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
@@ -1432,105 +1471,22 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     </Card>
                   </motion.div>
 
-                  <motion.div
-                    variants={bentoItem}
-                    className="grid gap-4 sm:grid-cols-3"
-                  >
-                    <AffiliateGlowMetric
-                      label="Total clicks"
-                      value="2,450"
-                      glow="emerald"
-                    />
-                    <AffiliateGlowMetric
-                      label="Active referrals"
-                      value="14"
-                      glow="cyan"
-                    />
-                    <AffiliateGlowMetric
-                      label="Unpaid earnings"
-                      value="$350.00"
-                      glow="emerald"
-                    />
-                  </motion.div>
-
-                  <motion.div variants={bentoItem} className="grid gap-4 lg:grid-cols-5">
-                    <Card
-                      className={cn(
-                        shellGlass,
-                        "lg:col-span-2 border-amber-500/15 bg-gradient-to-br from-amber-500/[0.06] to-transparent"
-                      )}
-                    >
+                  <motion.div variants={bentoItem}>
+                    <Card className={cn(shellGlass)}>
                       <CardHeader>
                         <CardTitle className="font-heading text-lg text-white">
-                          Payouts
+                          Performance & payouts
                         </CardTitle>
-                        <CardDescription className="text-sm text-zinc-400">
-                          Withdrawals settle in <strong className="text-zinc-200">USDT</strong>{" "}
-                          or <strong className="text-zinc-200">BTC</strong> on supported
-                          networks once your unpaid balance exceeds{" "}
-                          <strong className="text-amber-200">$50.00</strong>. Enterprise
-                          partners may request invoiced wires on signed agreements.
+                        <CardDescription className="text-zinc-500">
+                          Click tracking, commissions, and crypto payouts will appear here
+                          once the affiliate program is live. Your referral link above is
+                          ready to share.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <Button
-                          type="button"
-                          size="lg"
-                          className="w-full bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 py-6 text-base font-semibold text-black shadow-[0_0_40px_-6px_rgba(251,191,36,0.55)] hover:from-amber-300 hover:via-orange-300 hover:to-amber-400"
-                          onClick={() =>
-                            toast.success("Payout request received — finance will confirm wallet details.")
-                          }
-                        >
-                          Request payout
-                        </Button>
-                        <p className="mt-3 text-center text-xs text-zinc-500">
-                          Mock UI — settlement rails activate after compliance review.
+                        <p className="rounded-xl border border-dashed border-white/10 bg-black/30 px-4 py-10 text-center text-sm text-zinc-500">
+                          No referral activity recorded yet.
                         </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card className={cn(shellGlass, "lg:col-span-3")}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="font-heading text-lg text-white">
-                          Recent referrals
-                        </CardTitle>
-                        <CardDescription className="text-zinc-500">
-                          Latest attributed signups (masked IDs). Demo data for layout
-                          preview.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-0 sm:px-6">
-                        <ScrollArea className="h-[280px] sm:h-[240px]">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="border-white/[0.06] hover:bg-transparent">
-                                <TableHead className="text-zinc-400">Date</TableHead>
-                                <TableHead className="text-zinc-400">User</TableHead>
-                                <TableHead className="text-right text-zinc-400">
-                                  Commission
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {AFFILIATE_DEMO_ROWS.map((row) => (
-                                <TableRow
-                                  key={row.at}
-                                  className="border-white/[0.06] hover:bg-white/[0.02]"
-                                >
-                                  <TableCell className="font-mono text-xs text-zinc-400">
-                                    {formatDate(row.at)}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-sm text-emerald-200/90">
-                                    {row.masked}
-                                  </TableCell>
-                                  <TableCell className="text-right font-medium text-white">
-                                    {formatCurrency(row.commission)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </ScrollArea>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -1546,61 +1502,20 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                         API credentials
                       </CardTitle>
                       <CardDescription className="text-zinc-500">
-                        Programmatic access to your active proxy inventory (sample key
-                        for UI preview).
+                        Programmatic API keys are not available yet. Export your proxy
+                        list from My proxies, or use the examples below once keys are
+                        issued.
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <div
-                          className={cn(
-                            "min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-black/40 px-4 py-3 font-mono text-sm",
-                            !apiKeyRevealed && "select-none blur-sm"
-                          )}
-                        >
-                          {MOCK_API_KEY}
-                        </div>
-                        <div className="flex shrink-0 gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="border-white/12"
-                            onClick={() => setApiKeyRevealed((v) => !v)}
-                          >
-                            {apiKeyRevealed ? (
-                              <>
-                                <EyeOff className="size-3.5" />
-                                Hide
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="size-3.5" />
-                                Reveal
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="bg-emerald-500 text-black hover:bg-emerald-400"
-                            onClick={() =>
-                              void copyWithFeedback(
-                                "api-key",
-                                MOCK_API_KEY,
-                                "API key"
-                              )
-                            }
-                          >
-                            {copiedButtonId === "api-key" ? (
-                              <Check className="size-3.5" />
-                            ) : (
-                              <Copy className="size-3.5" />
-                            )}
-                            {copiedButtonId === "api-key" ? "Copied!" : "Copy"}
-                          </Button>
-                        </div>
-                      </div>
+                    <CardContent>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10"
+                        onClick={() => goView("proxies")}
+                      >
+                        Go to My proxies
+                      </Button>
                     </CardContent>
                   </Card>
 
@@ -1655,55 +1570,26 @@ data = r.json()`}
   );
 }
 
-function AffiliateGlowMetric({
-  label,
-  value,
-  glow,
-}: {
-  label: string;
-  value: string;
-  glow: "emerald" | "cyan";
-}) {
-  const halo =
-    glow === "emerald"
-      ? "from-emerald-400/35 via-emerald-500/10 to-transparent"
-      : "from-cyan-400/35 via-cyan-500/10 to-transparent";
-  const textGrad =
-    glow === "emerald"
-      ? "from-emerald-200 to-cyan-200 drop-shadow-[0_0_26px_rgba(52,211,153,0.42)]"
-      : "from-cyan-200 to-emerald-200 drop-shadow-[0_0_26px_rgba(34,211,238,0.42)]";
-
+function OrderStatusBadge({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
+  if (normalized === "completed") {
+    return (
+      <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+        Completed
+      </Badge>
+    );
+  }
+  if (normalized === "cancelled") {
+    return (
+      <Badge className="border-red-500/30 bg-red-500/10 text-red-300">
+        Cancelled
+      </Badge>
+    );
+  }
   return (
-    <motion.div {...hoverLift}>
-      <Card
-        className={cn(
-          shellGlass,
-          "relative h-full overflow-hidden ring-1 ring-inset ring-white/[0.07]"
-        )}
-      >
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 bg-gradient-to-b opacity-90",
-            halo
-          )}
-          aria-hidden
-        />
-        <CardContent className="relative p-5 sm:p-6">
-          <p className="text-xs font-medium tracking-wider text-zinc-500 uppercase">
-            {label}
-          </p>
-          <p
-            className={cn(
-              "mt-3 font-heading text-3xl font-bold tracking-tight tabular-nums sm:text-4xl",
-              "bg-gradient-to-r bg-clip-text text-transparent",
-              textGrad
-            )}
-          >
-            {value}
-          </p>
-        </CardContent>
-      </Card>
-    </motion.div>
+    <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-200">
+      Pending
+    </Badge>
   );
 }
 

@@ -15,11 +15,21 @@ export type UserDeposit = {
   created_at: string;
 };
 
+export type UserOrder = {
+  id: string;
+  proxy_type: string;
+  quantity: number;
+  total_price: number;
+  status: "pending" | "completed" | "cancelled" | string;
+  created_at: string;
+};
+
 export type DashboardData = {
   email: string;
   balance: number;
   proxies: UserProxy[];
   deposits: UserDeposit[];
+  orders: UserOrder[];
   isAdmin: boolean;
   /** Short code for affiliate referral URLs (`usr_<segment>`). */
   referralCode: string;

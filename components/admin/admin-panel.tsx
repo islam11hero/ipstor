@@ -8,14 +8,12 @@ import {
   ClipboardList,
   LayoutDashboard,
   Loader2,
-  Mail,
   MoreHorizontal,
-  Rocket,
   Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { approveDeposit, fulfillOrder } from "@/app/admin/actions";
+import { approveDeposit, fulfillOrder as fulfillOrderAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,6 +42,11 @@ import {
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 import { hoverLift, tapScale } from "@/lib/motion";
 import type { PendingDeposit, PendingOrder } from "@/lib/types/admin";
+import {
+  formatProductQuantityLabel,
+  formatProductTypeLabel,
+  getProduct,
+} from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 type RecentDepositTableRow = {
@@ -80,46 +83,6 @@ type AdminPanelProps = {
   orders: PendingOrder[];
   activeUserCount: number;
 };
-
-const DEMO_TOTAL_REVENUE_USD = 248_900;
-
-const MOCK_RECENT_DEPOSITS: {
-  user: string;
-  amount: number;
-  txHash: string;
-  status: string;
-}[] = [
-  {
-    user: "ops@meridian.io",
-    amount: 2500,
-    txHash: "0x7f3a…c91e (USDT-TRC20)",
-    status: "Confirmed",
-  },
-  {
-    user: "growth@northbeam.digital",
-    amount: 890,
-    txHash: "bc1q…9f2a (BTC)",
-    status: "Confirming (2/6)",
-  },
-  {
-    user: "security@signalfoundry.co",
-    amount: 420,
-    txHash: "0x9d2e…41ab (USDT-ERC20)",
-    status: "Confirmed",
-  },
-  {
-    user: "data@acme.example",
-    amount: 120,
-    txHash: "LTC…m8q3",
-    status: "Confirmed",
-  },
-  {
-    user: "finance@ipnova.partner",
-    amount: 5000,
-    txHash: "0x4b1c…e902 (USDT-TRC20)",
-    status: "Manual review",
-  },
-];
 
 const viewMotion = {
   initial: { opacity: 0, x: 14 },
@@ -220,43 +183,20 @@ function AdminPanelInner({
     },
     [router, searchParams]
   );
-  const [fulfillOrderId, setFulfillOrderId] = useState<string | null>(null);
-  const [ipAddress, setIpAddress] = useState("");
-  const [port, setPort] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [fulfillTargetOrder, setFulfillTargetOrder] = useState<PendingOrder | null>(null);
+  const [rawProxyList, setRawProxyList] = useState("");
 
-  const [provisionEmail, setProvisionEmail] = useState("");
-  const [provisionPaste, setProvisionPaste] = useState("");
-  const [provisionType, setProvisionType] = useState<
-    "datacenter" | "residential" | "mobile"
-  >("datacenter");
-
-  const recentDepositRows = useMemo<RecentDepositTableRow[]>(() => {
-    const fromDb = deposits.map((d) => ({
-      key: d.id,
-      user: d.user_email ?? shortId(d.user_id),
-      amount: d.amount,
-      txHash: d.txid,
-      status: "Pending review",
-    }));
-    const demo = MOCK_RECENT_DEPOSITS.map((r, i) => ({
-      key: `mock-${i}`,
-      user: r.user,
-      amount: r.amount,
-      txHash: r.txHash,
-      status: r.status,
-    }));
-    return [...fromDb, ...demo].slice(0, 8);
-  }, [deposits]);
-
-  function handleDeployProvision(e: React.FormEvent) {
-    e.preventDefault();
-    toast.success(
-      "Provision staged — wholesale lines queued for manual sync to the user workspace."
-    );
-    setProvisionPaste("");
-  }
+  const recentDepositRows = useMemo<RecentDepositTableRow[]>(
+    () =>
+      deposits.slice(0, 8).map((d) => ({
+        key: d.id,
+        user: d.user_email ?? shortId(d.user_id),
+        amount: d.amount,
+        txHash: d.txid,
+        status: "Pending review",
+      })),
+    [deposits]
+  );
 
   function refresh() {
     router.refresh();
@@ -274,29 +214,24 @@ function AdminPanelInner({
     });
   }
 
-  function openFulfillDialog(orderId: string) {
-    setFulfillOrderId(orderId);
-    setIpAddress("");
-    setPort("");
-    setUsername("");
-    setPassword("");
+  function openFulfillDialog(order: PendingOrder) {
+    setFulfillTargetOrder(order);
+    setRawProxyList("");
   }
 
   function closeFulfillDialog() {
-    setFulfillOrderId(null);
+    setFulfillTargetOrder(null);
+    setRawProxyList("");
   }
 
   function handleFulfillSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!fulfillOrderId) return;
+    if (!fulfillTargetOrder) return;
 
     startTransition(async () => {
-      const result = await fulfillOrder({
-        orderId: fulfillOrderId,
-        ipAddress,
-        port,
-        username,
-        password,
+      const result = await fulfillOrderAction({
+        orderId: fulfillTargetOrder.id,
+        rawProxyList,
       });
 
       if (result.error) {
@@ -304,11 +239,21 @@ function AdminPanelInner({
         return;
       }
 
-      toast.success("Order fulfilled and proxy credentials saved.");
+      toast.success(
+        `Order fulfilled — ${result.delivered ?? 0} proxy line(s) delivered.`
+      );
       closeFulfillDialog();
       refresh();
     });
   }
+
+  const fulfillProduct = fulfillTargetOrder ? getProduct(fulfillTargetOrder.proxy_type) : null;
+  const fulfillLineHint =
+    fulfillProduct?.unit === "gb"
+      ? "Paste gateway line(s) in IP:PORT:USER:PASS format (minimum 1)."
+      : fulfillTargetOrder
+        ? `Paste exactly ${fulfillTargetOrder.quantity} line(s), one per row.`
+        : "";
 
   return (
     <>
@@ -393,106 +338,51 @@ function AdminPanelInner({
                     className="grid gap-4 sm:grid-cols-3"
                   >
                     <MetricTile
-                      label="Total revenue"
-                      value={formatCurrency(DEMO_TOTAL_REVENUE_USD)}
-                      hint="Bookings + proxy SKUs (illustrative)"
+                      label="Pending orders"
+                      value={String(orders.length)}
+                      hint="Awaiting fulfillment"
+                    />
+                    <MetricTile
+                      label="Pending deposits"
+                      value={String(deposits.length)}
+                      hint="Crypto top-ups to review"
                     />
                     <MetricTile
                       label="Active users"
                       value={String(activeUserCount)}
                       hint="Profiles in database"
                     />
-                    <MetricTile
-                      label="Pending orders"
-                      value={String(orders.length)}
-                      hint="Awaiting fulfillment"
-                    />
                   </motion.div>
 
                   <motion.div variants={bentoItem}>
                     <div className={cn(shellGlass, "p-6 sm:p-8")}>
-                      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h2 className="font-heading text-xl font-semibold text-white">
-                            Provision proxies
-                          </h2>
-                          <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-                            Paste wholesale lines (Vultr, ISP partners) in raw{" "}
-                            <span className="font-mono text-zinc-400">IP:PORT:USER:PASS</span>{" "}
-                            format. Deployment is manual—this control stages credentials
-                            for operator review.
-                          </p>
-                        </div>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-                          <Shield className="size-3.5" aria-hidden />
-                          Admin only
-                        </span>
-                      </div>
-                      <form onSubmit={handleDeployProvision} className="space-y-5">
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="provision-email"
-                            className="flex items-center gap-2 text-zinc-300"
-                          >
-                            <Mail className="size-3.5 text-zinc-500" aria-hidden />
-                            User email
-                          </Label>
-                          <Input
-                            id="provision-email"
-                            type="email"
-                            autoComplete="off"
-                            placeholder="customer@company.com"
-                            value={provisionEmail}
-                            onChange={(e) => setProvisionEmail(e.target.value)}
-                            className="border-white/10 bg-black/50 font-mono text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="provision-paste" className="text-zinc-300">
-                            Raw proxy list
-                          </Label>
-                          <textarea
-                            id="provision-paste"
-                            rows={8}
-                            value={provisionPaste}
-                            onChange={(e) => setProvisionPaste(e.target.value)}
-                            placeholder={
-                              "203.0.113.42:8800:user_a:pass_a\n203.0.113.43:8800:user_b:pass_b"
-                            }
-                            className={cn(
-                              "w-full resize-y rounded-xl border border-white/10 bg-black/50 px-4 py-3 font-mono text-sm text-zinc-200 outline-none",
-                              "placeholder:text-zinc-600 focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
-                            )}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="provision-type" className="text-zinc-300">
-                            Proxy type
-                          </Label>
-                          <select
-                            id="provision-type"
-                            value={provisionType}
-                            onChange={(e) =>
-                              setProvisionType(
-                                e.target.value as typeof provisionType
-                              )
-                            }
-                            className="h-11 w-full max-w-md rounded-xl border border-white/10 bg-black/50 px-3 text-sm text-zinc-200 outline-none focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
-                          >
-                            <option value="datacenter">Datacenter</option>
-                            <option value="residential">Residential</option>
-                            <option value="mobile">Mobile</option>
-                          </select>
-                        </div>
+                      <h2 className="font-heading text-xl font-semibold text-white">
+                        Operations
+                      </h2>
+                      <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+                        Fulfill proxy orders and approve crypto deposits from the
+                        dedicated queues.
+                      </p>
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                         <Button
-                          type="submit"
-                          size="lg"
-                          className="w-full gap-2 bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 py-7 text-base font-semibold text-black shadow-[0_0_48px_-8px_rgba(52,211,153,0.55)] hover:from-emerald-300 hover:via-cyan-300 hover:to-emerald-300 sm:w-auto sm:min-w-[240px]"
+                          type="button"
+                          variant="outline"
+                          className="border-white/12 bg-black/30"
+                          onClick={() => navigateView("orders")}
                         >
-                          <Rocket className="size-5" aria-hidden />
-                          Deploy to user
+                          <ClipboardList className="size-4" />
+                          Pending orders ({orders.length})
                         </Button>
-                      </form>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-white/12 bg-black/30"
+                          onClick={() => navigateView("deposits")}
+                        >
+                          <Banknote className="size-4" />
+                          Pending deposits ({deposits.length})
+                        </Button>
+                      </div>
                     </div>
                   </motion.div>
 
@@ -500,55 +390,51 @@ function AdminPanelInner({
                     <div className={cn(shellGlass, "overflow-hidden")}>
                       <div className="border-b border-white/[0.06] px-6 py-4">
                         <h2 className="font-heading text-lg font-semibold text-white">
-                          Recent deposits
+                          Pending deposits
                         </h2>
                         <p className="mt-1 text-xs text-zinc-500">
-                          Treasury movements across networks (includes demo rows for UI
-                          validation).
+                          Latest crypto top-ups waiting for approval (live data).
                         </p>
                       </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-white/[0.08] hover:bg-transparent">
-                            <TableHead className="text-zinc-400">User</TableHead>
-                            <TableHead className="text-zinc-400">Amount</TableHead>
-                            <TableHead className="text-zinc-400">Crypto TX hash</TableHead>
-                            <TableHead className="text-right text-zinc-400">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {recentDepositRows.map((row) => (
-                            <TableRow
-                              key={row.key}
-                              className="border-white/[0.05] hover:bg-white/[0.02]"
-                            >
-                              <TableCell className="font-medium text-zinc-100">
-                                {row.user}
-                              </TableCell>
-                              <TableCell className="font-mono text-sm text-emerald-200/90">
-                                {formatCurrency(row.amount)}
-                              </TableCell>
-                              <TableCell className="max-w-[220px] truncate font-mono text-xs text-zinc-400 sm:max-w-none">
-                                {row.txHash}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <StatusBadge
-                                  tone={
-                                    row.status.includes("Pending") ||
-                                    row.status.includes("review")
-                                      ? "warn"
-                                      : row.status.includes("Confirming")
-                                        ? "warn"
-                                        : "success"
-                                  }
-                                >
-                                  {row.status}
-                                </StatusBadge>
-                              </TableCell>
+                      {recentDepositRows.length === 0 ? (
+                        <p className="p-10 text-center text-sm text-zinc-500">
+                          No pending deposits right now.
+                        </p>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-white/[0.08] hover:bg-transparent">
+                              <TableHead className="text-zinc-400">User</TableHead>
+                              <TableHead className="text-zinc-400">Amount</TableHead>
+                              <TableHead className="text-zinc-400">TXID</TableHead>
+                              <TableHead className="text-right text-zinc-400">
+                                Status
+                              </TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {recentDepositRows.map((row) => (
+                              <TableRow
+                                key={row.key}
+                                className="border-white/[0.05] hover:bg-white/[0.02]"
+                              >
+                                <TableCell className="font-medium text-zinc-100">
+                                  {row.user}
+                                </TableCell>
+                                <TableCell className="font-mono text-sm text-emerald-200/90">
+                                  {formatCurrency(row.amount)}
+                                </TableCell>
+                                <TableCell className="max-w-[220px] truncate font-mono text-xs text-zinc-400 sm:max-w-none">
+                                  {row.txHash}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <StatusBadge tone="warn">{row.status}</StatusBadge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
                     </div>
                   </motion.div>
                 </motion.div>
@@ -677,9 +563,11 @@ function AdminPanelInner({
                               {shortId(order.id)}
                             </TableCell>
                             <TableCell className="capitalize text-zinc-200">
-                              {order.proxy_type}
+                              {formatProductTypeLabel(order.proxy_type)}
                             </TableCell>
-                            <TableCell>{order.quantity}</TableCell>
+                            <TableCell>
+                              {orderQuantityLabel(order.proxy_type, order.quantity)}
+                            </TableCell>
                             <TableCell className="font-medium">
                               {formatCurrency(order.total_price)}
                             </TableCell>
@@ -706,7 +594,7 @@ function AdminPanelInner({
                                   className="min-w-44 border-white/10 bg-zinc-950/95 text-zinc-100"
                                 >
                                   <DropdownMenuItem
-                                    onClick={() => openFulfillDialog(order.id)}
+                                    onClick={() => openFulfillDialog(order)}
                                   >
                                     Fulfill order
                                   </DropdownMenuItem>
@@ -738,62 +626,47 @@ function AdminPanelInner({
       </div>
 
       <Dialog
-        open={fulfillOrderId !== null}
+        open={fulfillTargetOrder !== null}
         onOpenChange={(open) => !open && closeFulfillDialog()}
       >
-        <DialogContent className="border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-md">
+        <DialogContent className="border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Fulfill order</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              Enter proxy credentials to deliver to the customer.
+              {fulfillTargetOrder ? (
+                <>
+                  {formatProductTypeLabel(fulfillTargetOrder.proxy_type)} ·{" "}
+                  {fulfillProduct
+                    ? formatProductQuantityLabel(
+                        fulfillProduct,
+                        fulfillTargetOrder.quantity
+                      )
+                    : fulfillTargetOrder.quantity}{" "}
+                  · {formatCurrency(fulfillTargetOrder.total_price)}. {fulfillLineHint}
+                </>
+              ) : (
+                "Paste proxy credentials to deliver to the customer."
+              )}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFulfillSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ip-address">IP Address</Label>
-              <Input
-                id="ip-address"
-                placeholder="192.168.1.1"
-                value={ipAddress}
-                onChange={(e) => setIpAddress(e.target.value)}
+            <motion.div className="space-y-2">
+              <Label htmlFor="raw-proxy-list">Proxy lines</Label>
+              <textarea
+                id="raw-proxy-list"
+                rows={10}
+                value={rawProxyList}
+                onChange={(e) => setRawProxyList(e.target.value)}
+                placeholder={
+                  "203.0.113.42:8800:user_a:pass_a\n203.0.113.43:8800:user_b:pass_b"
+                }
                 required
-                className="border-white/10 bg-black/40"
+                className={cn(
+                  "w-full resize-y rounded-xl border border-white/10 bg-black/50 px-4 py-3 font-mono text-sm text-zinc-200 outline-none",
+                  "placeholder:text-zinc-600 focus-visible:border-emerald-500/40 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="port">Port</Label>
-              <Input
-                id="port"
-                placeholder="8080"
-                value={port}
-                onChange={(e) => setPort(e.target.value)}
-                required
-                className="border-white/10 bg-black/40"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                placeholder="proxy_user"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="border-white/10 bg-black/40"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-white/10 bg-black/40"
-              />
-            </div>
+            </motion.div>
             <DialogFooter className="border-0 bg-transparent p-0 pt-2">
               <Button
                 type="button"
@@ -832,6 +705,11 @@ export function AdminPanel(props: AdminPanelProps) {
       <AdminPanelInner {...props} />
     </Suspense>
   );
+}
+
+function orderQuantityLabel(proxyType: string, quantity: number) {
+  const product = getProduct(proxyType);
+  return product ? formatProductQuantityLabel(product, quantity) : String(quantity);
 }
 
 function MetricTile({

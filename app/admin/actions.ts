@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { ADMIN_EMAIL } from "@/lib/admin";
+import { getProduct } from "@/lib/pricing";
+import { parseProxyLinesFromText } from "@/lib/proxy-format";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/utils/supabase/service";
 
@@ -95,23 +97,52 @@ export async function approveDeposit(depositId: string) {
 
 export async function fulfillOrder(input: {
   orderId: string;
-  ipAddress: string;
-  port: string;
-  username: string;
-  password: string;
+  rawProxyList: string;
 }) {
   try {
     const supabase = await getPrivilegedClient();
+    const trimmedList = input.rawProxyList.trim();
+
+    if (!trimmedList) {
+      return { error: "Paste at least one proxy line (IP:PORT:USER:PASS)." };
+    }
+
+    const { credentials, invalidLines } = parseProxyLinesFromText(trimmedList);
+
+    if (invalidLines.length > 0) {
+      return {
+        error: `Invalid proxy line format: ${invalidLines[0]}`,
+      };
+    }
+
+    if (credentials.length === 0) {
+      return { error: "No valid proxy lines found." };
+    }
 
     const { data: order, error: fetchError } = await supabase
       .from("orders")
-      .select("id, user_id, status")
+      .select("id, user_id, proxy_type, quantity, status")
       .eq("id", input.orderId)
       .eq("status", "pending")
       .single();
 
     if (fetchError || !order) {
       return { error: "Order not found or already fulfilled." };
+    }
+
+    const product = getProduct(order.proxy_type);
+    if (!product) {
+      return { error: "Unknown product type on this order." };
+    }
+
+    if (product.unit === "ip" && credentials.length !== order.quantity) {
+      return {
+        error: `This order requires exactly ${order.quantity} proxy line(s). You pasted ${credentials.length}.`,
+      };
+    }
+
+    if (product.unit === "gb" && credentials.length < 1) {
+      return { error: "Paste at least one gateway proxy line for this GB order." };
     }
 
     const { data: completedOrder, error: orderError } = await supabase
@@ -126,14 +157,18 @@ export async function fulfillOrder(input: {
       return { error: "Order not found or already fulfilled." };
     }
 
-    const { error: proxyError } = await supabase.from("user_proxies").insert({
+    const proxyRows = credentials.map((credential) => ({
       user_id: order.user_id,
       order_id: order.id,
-      ip_address: input.ipAddress.trim(),
-      port: input.port.trim(),
-      username: input.username.trim(),
-      password: input.password,
-    });
+      ip_address: credential.ip_address,
+      port: credential.port,
+      username: credential.username,
+      password: credential.password,
+    }));
+
+    const { error: proxyError } = await supabase
+      .from("user_proxies")
+      .insert(proxyRows);
 
     if (proxyError) {
       await supabase
@@ -144,7 +179,7 @@ export async function fulfillOrder(input: {
     }
 
     revalidateDashboardAndAdmin();
-    return { success: true };
+    return { success: true, delivered: credentials.length };
   } catch {
     return { error: "You are not authorized to perform this action." };
   }

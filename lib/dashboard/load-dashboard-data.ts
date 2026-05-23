@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { UserDeposit, UserProxy } from "@/lib/types/dashboard";
+import type { UserDeposit, UserOrder, UserProxy } from "@/lib/types/dashboard";
 import { createServiceClient } from "@/utils/supabase/service";
 
 export type DashboardLoadIssue = {
@@ -13,6 +13,7 @@ export type DashboardLoadResult = {
   balance: number;
   proxies: UserProxy[];
   deposits: UserDeposit[];
+  orders: UserOrder[];
   issues: DashboardLoadIssue[];
 };
 
@@ -202,6 +203,28 @@ async function fetchUserDeposits(
   return { deposits: [], error: result.error.message };
 }
 
+async function fetchUserOrders(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ orders: UserOrder[]; error: string | null }> {
+  const result = await supabase
+    .from("orders")
+    .select("id, proxy_type, quantity, total_price, status, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (!result.error) {
+    return { orders: (result.data ?? []) as UserOrder[], error: null };
+  }
+
+  if (isMissingRelation(result.error.message, "orders")) {
+    return { orders: [], error: result.error.message };
+  }
+
+  return { orders: [], error: result.error.message };
+}
+
 export async function loadDashboardData(
   supabase: SupabaseClient,
   user: { id: string; email?: string | null }
@@ -217,9 +240,10 @@ export async function loadDashboardData(
     });
   }
 
-  const [proxiesResult, depositsResult] = await Promise.all([
+  const [proxiesResult, depositsResult, ordersResult] = await Promise.all([
     fetchUserProxies(supabase, user.id),
     fetchUserDeposits(supabase, user.id),
+    fetchUserOrders(supabase, user.id),
   ]);
 
   if (proxiesResult.error) {
@@ -235,6 +259,14 @@ export async function loadDashboardData(
       label: "Deposit history",
       message: depositsResult.error,
       fatal: isMissingRelation(depositsResult.error, "deposits"),
+    });
+  }
+
+  if (ordersResult.error) {
+    issues.push({
+      label: "Order history",
+      message: ordersResult.error,
+      fatal: isMissingRelation(ordersResult.error, "orders"),
     });
   }
 
@@ -258,6 +290,7 @@ export async function loadDashboardData(
     balance: profile.balance,
     proxies: proxiesResult.proxies,
     deposits: depositsResult.deposits,
+    orders: ordersResult.orders,
     issues,
   };
 }

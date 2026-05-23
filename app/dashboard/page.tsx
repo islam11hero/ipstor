@@ -81,6 +81,7 @@ export default async function DashboardPage() {
     balance: loaded.balance,
     proxies: loaded.proxies,
     deposits: loaded.deposits,
+    orders: loaded.orders,
     isAdmin: isAdminEmail(user.email),
     referralCode: `usr_${idSeg}`,
   };

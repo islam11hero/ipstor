@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
+import { ensureUserProfile } from "@/lib/dashboard/load-dashboard-data";
 import {
   calculateOrderTotal,
+  getProduct,
+  isProxyProduct,
   type ProxyProduct,
 } from "@/lib/pricing";
 import { createClient } from "@/utils/supabase/server";
@@ -31,24 +34,28 @@ export async function placeOrder(input: {
     return { error: auth.error ?? "Unauthorized" };
   }
 
+  if (!isProxyProduct(input.proxyType)) {
+    return { error: "Unknown product type." };
+  }
+
+  const product = getProduct(input.proxyType)!;
   const quantity = Number(input.quantity);
   if (!Number.isFinite(quantity) || quantity <= 0) {
     return { error: "Enter a valid quantity greater than zero." };
   }
 
-  const totalPrice = calculateOrderTotal(input.proxyType, quantity);
-
-  const { data: profile, error: profileError } = await auth.supabase
-    .from("profiles")
-    .select("balance")
-    .eq("id", auth.user.id)
-    .single();
-
-  if (profileError || !profile) {
-    return { error: "Could not load your profile balance." };
+  if (product.unit === "ip" && !Number.isInteger(quantity)) {
+    return { error: "Enter a whole number of IPs for this product." };
   }
 
-  const currentBalance = Number(profile.balance ?? 0);
+  const profile = await ensureUserProfile(auth.supabase, auth.user);
+  if (profile.error) {
+    return { error: profile.error };
+  }
+
+  const totalPrice = calculateOrderTotal(input.proxyType, quantity);
+  const currentBalance = profile.balance;
+
   if (currentBalance < totalPrice) {
     return {
       error: `Insufficient balance. You need $${totalPrice.toFixed(2)} but have $${currentBalance.toFixed(2)}.`,
@@ -66,22 +73,26 @@ export async function placeOrder(input: {
     return { error: balanceError.message };
   }
 
-  const { error: orderError } = await auth.supabase.from("orders").insert({
-    user_id: auth.user.id,
-    proxy_type: input.proxyType,
-    quantity,
-    total_price: totalPrice,
-    status: "pending",
-  });
+  const { data: order, error: orderError } = await auth.supabase
+    .from("orders")
+    .insert({
+      user_id: auth.user.id,
+      proxy_type: input.proxyType,
+      quantity,
+      total_price: totalPrice,
+      status: "pending",
+    })
+    .select("id")
+    .single();
 
-  if (orderError) {
+  if (orderError || !order) {
     await auth.supabase
       .from("profiles")
       .update({ balance: currentBalance })
       .eq("id", auth.user.id);
-    return { error: orderError.message };
+    return { error: orderError?.message ?? "Could not create order." };
   }
 
   revalidatePath("/dashboard");
-  return { success: true, newBalance };
+  return { success: true, newBalance, orderId: order.id };
 }
