@@ -25,6 +25,11 @@ async function getPrivilegedClient() {
   return createServiceClient() ?? (await createClient());
 }
 
+function revalidateDashboardAndAdmin() {
+  revalidatePath("/dashboard");
+  revalidatePath("/admin");
+}
+
 export async function approveDeposit(depositId: string) {
   try {
     const supabase = await getPrivilegedClient();
@@ -81,7 +86,7 @@ export async function approveDeposit(depositId: string) {
       return { error: balanceError.message };
     }
 
-    revalidatePath("/admin");
+    revalidateDashboardAndAdmin();
     return { success: true };
   } catch {
     return { error: "You are not authorized to perform this action." };
@@ -138,7 +143,7 @@ export async function fulfillOrder(input: {
       return { error: proxyError.message };
     }
 
-    revalidatePath("/admin");
+    revalidateDashboardAndAdmin();
     return { success: true };
   } catch {
     return { error: "You are not authorized to perform this action." };

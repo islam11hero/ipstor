@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 
 import {
+  extractInvoiceId,
+  normalizeNowPaymentsTxid,
+} from "@/lib/nowpayments-txid";
+import {
   getNowPaymentsIpnUrl,
   getNowPaymentsSuccessUrl,
 } from "@/lib/nowpayments-urls";
 import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/utils/supabase/service";
 
 const INVOICE_URL = "https://api.nowpayments.io/v1/invoice";
 
@@ -56,7 +61,6 @@ export async function POST(request: Request) {
 
   const price_amount = Math.round(amount * 100) / 100;
 
-  // Revenue-critical: production defaults to https://ipnova.online (see lib/nowpayments-urls).
   const invoicePayload = {
     price_amount,
     price_currency: "usd",
@@ -101,5 +105,67 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ invoice_url });
+  const invoiceId = extractInvoiceId(npJson);
+  const pendingTxid = normalizeNowPaymentsTxid(invoiceId);
+
+  if (!pendingTxid) {
+    console.error("[api/payment] Missing invoice id in NowPayments response", {
+      userId: user.id,
+      responseKeys: Object.keys(npJson),
+    });
+    return NextResponse.json(
+      { error: "Payment provider did not return an invoice identifier." },
+      { status: 502 }
+    );
+  }
+
+  const serviceSupabase = createServiceClient();
+  if (!serviceSupabase) {
+    console.error("[api/payment] SUPABASE_SERVICE_ROLE_KEY not configured");
+    return NextResponse.json(
+      { error: "Payment tracking is not configured on the server." },
+      { status: 503 }
+    );
+  }
+
+  const { data: pendingResult, error: pendingError } =
+    await serviceSupabase.rpc("create_pending_crypto_deposit", {
+      p_user_id: user.id,
+      p_amount: price_amount,
+      p_txid: pendingTxid,
+    });
+
+  if (pendingError) {
+    console.error("[api/payment] create_pending_crypto_deposit failed", {
+      userId: user.id,
+      pendingTxid,
+      amount: price_amount,
+      message: pendingError.message,
+    });
+    return NextResponse.json(
+      { error: "Could not register pending deposit. Please try again." },
+      { status: 500 }
+    );
+  }
+
+  const pendingStatus =
+    typeof pendingResult === "object" &&
+    pendingResult !== null &&
+    "status" in pendingResult &&
+    typeof (pendingResult as { status: unknown }).status === "string"
+      ? (pendingResult as { status: string }).status
+      : null;
+
+  if (pendingStatus === "already_approved") {
+    console.error("[api/payment] Invoice txid already approved", {
+      userId: user.id,
+      pendingTxid,
+    });
+    return NextResponse.json(
+      { error: "This invoice was already credited." },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({ invoice_url, pending_txid: pendingTxid });
 }

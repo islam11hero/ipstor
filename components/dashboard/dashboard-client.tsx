@@ -246,6 +246,11 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [balance, setBalance] = useState(initialData.balance);
+
+  useEffect(() => {
+    setBalance(initialData.balance);
+  }, [initialData.balance]);
+
   const view = useMemo(
     () => parseDashboardViewParam(searchParams.get(VIEW_PARAM)),
     [searchParams]
