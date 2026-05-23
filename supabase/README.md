@@ -5,7 +5,7 @@ Your dashboard errors mean the **Supabase project schema does not match the app*
 ## Quick fix (recommended)
 
 1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**.
-2. Open **`supabase/setup_all.sql`** in this repo, copy the **entire file**, paste into SQL Editor, click **Run**.
+2. Paste and run **`supabase/setup_repair.sql`** if you already have a `profiles` table (avoids “relation profiles already exists”). Otherwise run **`supabase/setup_all.sql`** (full bootstrap).
 3. Confirm **Project Settings → API** env vars on Vercel/local match this project:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
