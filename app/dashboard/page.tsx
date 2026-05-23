@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   }
 
   const [profileResult, proxiesResult, depositsResult] = await Promise.all([
-    supabase.from("profiles").select("balance").eq("id", user.id).single(),
+    supabase.from("profiles").select("balance").eq("id", user.id).maybeSingle(),
     supabase
       .from("user_proxies")
       .select("id, ip_address, port, username, password, created_at")
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
     loadErrors.push(
       dashboardLoadError(
         "Account balance",
-        "Your profile record was not found. Please contact support."
+        "Your profile record was not found. Run the base Supabase migration (profiles table + signup trigger) or contact support."
       )
     );
   }
