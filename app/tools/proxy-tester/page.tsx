@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 
 import { ProxyTesterClient } from "@/components/tools/proxy-tester-client";
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { ProxyValidatorSeoArticle } from "@/lib/seo-tool-articles";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = staticPageMetadata({
+  path: "/tools/proxy-tester",
   title: "Proxy Format Validator — IP:PORT:USER:PASS | IP Nova",
   description:
     "Validate proxy connection strings (IP:PORT:USER:PASS), extract host and credentials, and verify IPv4 structure before production. Educational guide to HTTP/HTTPS/SOCKS5 identity, anti-detect browsers, and why fake ping tests mislead B2B buyers.",
-};
+});
 
 export default function ProxyTesterPage() {
   return (

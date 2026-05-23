@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Network } from "lucide-react";
 
-export const metadata = {
+import { staticPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = staticPageMetadata({
+  path: "/about",
   title: "About",
   description:
     "IP Nova builds enterprise proxy infrastructure with ethical IP sourcing, KYC-aligned programs, HTTP/HTTPS/SOCKS5 protocol parity, and global routing for B2B automation teams.",
-};
+});
 
 export default function AboutPage() {
   return (

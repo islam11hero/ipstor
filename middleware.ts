@@ -8,7 +8,27 @@ function getSupabaseKey() {
   );
 }
 
+/** Routes that need Supabase session refresh (SSR cookie sync). Public/SEO paths are excluded. */
+function requiresAuthSession(pathname: string): boolean {
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
+    return true;
+  }
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return true;
+  }
+  if (pathname === "/api/payment" || pathname.startsWith("/api/payment/")) {
+    return true;
+  }
+  return false;
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (!requiresAuthSession(pathname)) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,6 +62,10 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/dashboard",
+    "/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/api/payment",
   ],
 };

@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Network } from "lucide-react";
 
-export const metadata = {
+import { staticPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = staticPageMetadata({
+  path: "/terms",
   title: "Terms of Service",
   description:
     "IP Nova terms of service: acceptable use, ethical IP sourcing obligations, KYC requirements for certain SKUs, SLAs, liability, and enterprise contractual frameworks.",
-};
+});
 
 export default function TermsPage() {
   return (

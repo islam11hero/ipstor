@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
+
 import { HomeFaqSection, HOME_PAGE_FAQS } from "@/components/marketing/home-faq-section";
 import { MarketingHome } from "@/components/marketing/marketing-home";
+import { canonicalUrl } from "@/lib/page-metadata";
 import { buildFaqPageJsonLd } from "@/lib/seo-data";
 import { SITE_URL } from "@/lib/site-url";
+
+export const metadata: Metadata = {
+  alternates: { canonical: canonicalUrl() },
+};
 
 const organizationJsonLd = {
   "@context": "https://schema.org",

@@ -2,14 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Network,
-  Mail,
-  Send,
-  Share2,
-} from "lucide-react";
+import { Mail, Network, Send, Share2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import {
+  FOOTER_COMPANY_PROGRAMMATIC_LINKS,
+  FOOTER_COMPANY_STATIC_LINKS,
+  FOOTER_LEGAL_PROGRAMMATIC_LINKS,
+  FOOTER_LEGAL_STATIC_LINKS,
+  FOOTER_LOCATIONS_LINKS,
+  FOOTER_PRODUCT_LINKS,
+  FOOTER_RESOURCES_LINKS,
+  FOOTER_TOOLS_PROGRAMMATIC_LINKS,
+  FOOTER_TOOLS_STATIC_LINKS,
+  programmaticPath,
+} from "@/lib/seo-sitemap-paths";
 
 const linkClass =
   "text-sm text-zinc-500 transition-colors hover:text-zinc-200 inline-flex items-center flex-wrap gap-x-1";
@@ -19,10 +26,7 @@ const heading =
 
 export function Footer() {
   const pathname = usePathname();
-  if (
-    pathname?.startsWith("/dashboard") ||
-    pathname?.startsWith("/admin")
-  ) {
+  if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/admin")) {
     return null;
   }
 
@@ -33,173 +37,146 @@ export function Footer() {
           <div>
             <h3 className={heading}>Products</h3>
             <ul className="mt-4 space-y-3">
-              <li>
-                <Link href="/products/residential-proxies" className={linkClass}>
-                  Residential Proxies
-                  <Badge className="ml-2 border-none bg-emerald-500/20 text-[10px] text-emerald-400">
-                    Popular
-                  </Badge>
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/isp-proxies" className={linkClass}>
-                  ISP Proxies
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/datacenter-proxies" className={linkClass}>
-                  Datacenter Proxies
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/mobile-proxies" className={linkClass}>
-                  Mobile Proxies
-                </Link>
-              </li>
-              <li>
-                <Link href="/products/web-unblocker" className={linkClass}>
-                  Web Unblocker
-                </Link>
-              </li>
+              {FOOTER_PRODUCT_LINKS.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    href={programmaticPath({
+                      category: "products",
+                      slug: item.slug,
+                    })}
+                    className={linkClass}
+                  >
+                    {item.label}
+                    {"popular" in item && item.popular === true ? (
+                      <Badge className="ml-2 border-none bg-emerald-500/20 text-[10px] text-emerald-400">
+                        Popular
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h3 className={heading}>Tools</h3>
             <ul className="mt-4 space-y-3">
-              <li>
-                <Link href="/tools" className={linkClass}>
-                  Tools hub
-                </Link>
-              </li>
-              <li>
-                <Link href="/tools/proxy-tester" className={linkClass}>
-                  Proxy format validator
-                </Link>
-              </li>
-              <li>
-                <Link href="/tools/ip-lookup" className={linkClass}>
-                  IP Lookup
-                </Link>
-              </li>
-              <li>
-                <Link href="/tools/user-agent-generator" className={linkClass}>
-                  User-Agent Generator
-                </Link>
-              </li>
-              <li>
-                <Link href="/tools/chrome-extension" className={linkClass}>
-                  Chrome Extension
-                </Link>
-              </li>
-              <li>
-                <Link href="/tools/firefox-addon" className={linkClass}>
-                  Firefox Add-on
-                </Link>
-              </li>
+              {FOOTER_TOOLS_STATIC_LINKS.map((item) => (
+                <li key={item.path}>
+                  <Link href={item.path} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              {FOOTER_TOOLS_PROGRAMMATIC_LINKS.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    href={programmaticPath({
+                      category: "tools",
+                      slug: item.slug,
+                    })}
+                    className={linkClass}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h3 className={heading}>Resources</h3>
             <ul className="mt-4 space-y-3">
-              <li>
-                <Link href="/resources/blog" className={linkClass}>
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/resources/documentation" className={linkClass}>
-                  Documentation
-                </Link>
-              </li>
-              <li>
-                <Link href="/resources/integrations" className={linkClass}>
-                  Integrations
-                </Link>
-              </li>
-              <li>
-                <Link href="/resources/network-status" className={linkClass}>
-                  <span
-                    className="mr-2 inline-block size-2 animate-pulse rounded-full bg-emerald-500"
-                    aria-hidden
-                  />
-                  Network Status
-                </Link>
-              </li>
+              {FOOTER_RESOURCES_LINKS.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    href={programmaticPath({
+                      category: "resources",
+                      slug: item.slug,
+                    })}
+                    className={linkClass}
+                  >
+                    {"live" in item && item.live ? (
+                      <span
+                        className="mr-2 inline-block size-2 animate-pulse rounded-full bg-emerald-500"
+                        aria-hidden
+                      />
+                    ) : null}
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h3 className={heading}>Locations</h3>
             <ul className="mt-4 space-y-3">
-              <li>
-                <Link href="/locations/united-states" className={linkClass}>
-                  United States
-                </Link>
-              </li>
-              <li>
-                <Link href="/locations/united-kingdom" className={linkClass}>
-                  United Kingdom
-                </Link>
-              </li>
-              <li>
-                <Link href="/locations/germany" className={linkClass}>
-                  Germany
-                </Link>
-              </li>
-              <li>
-                <Link href="/locations/japan" className={linkClass}>
-                  Japan
-                </Link>
-              </li>
-              <li>
-                <Link href="/locations/global-network" className={linkClass}>
-                  Global Network
-                </Link>
-              </li>
+              {FOOTER_LOCATIONS_LINKS.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    href={programmaticPath({
+                      category: "locations",
+                      slug: item.slug,
+                    })}
+                    className={linkClass}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h3 className={heading}>Company</h3>
             <ul className="mt-4 space-y-3">
-              <li>
-                <Link href="/company/about-us" className={linkClass}>
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/company/affiliate-program" className={linkClass}>
-                  Affiliate Program
-                </Link>
-              </li>
-              <li>
-                <Link href="/company/contact-us" className={linkClass}>
-                  Contact Us
-                </Link>
-              </li>
+              {FOOTER_COMPANY_STATIC_LINKS.map((item) => (
+                <li key={item.path}>
+                  <Link href={item.path} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              {FOOTER_COMPANY_PROGRAMMATIC_LINKS.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    href={programmaticPath({
+                      category: "company",
+                      slug: item.slug,
+                    })}
+                    className={linkClass}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h3 className={heading}>Legal</h3>
             <ul className="mt-4 space-y-3">
-              <li>
-                <Link href="/legal/terms-of-service" className={linkClass}>
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="/legal/privacy-policy" className={linkClass}>
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/legal/kyc-policy" className={linkClass}>
-                  KYC Policy
-                </Link>
-              </li>
+              {FOOTER_LEGAL_STATIC_LINKS.map((item) => (
+                <li key={item.path}>
+                  <Link href={item.path} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              {FOOTER_LEGAL_PROGRAMMATIC_LINKS.map((item) => (
+                <li key={item.slug}>
+                  <Link
+                    href={programmaticPath({
+                      category: "legal",
+                      slug: item.slug,
+                    })}
+                    className={linkClass}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -220,14 +197,20 @@ export function Footer() {
             <div className="flex flex-col gap-3 md:items-end">
               <div className="flex flex-wrap items-center gap-5 text-zinc-500">
                 <a
-                  href="/resources/blog"
+                  href={programmaticPath({
+                    category: "resources",
+                    slug: "blog",
+                  })}
                   className="transition-colors hover:text-zinc-200"
                   aria-label="IP Nova blog"
                 >
                   <Share2 className="size-5" />
                 </a>
                 <a
-                  href="/company/contact-us"
+                  href={programmaticPath({
+                    category: "company",
+                    slug: "contact-us",
+                  })}
                   className="transition-colors hover:text-zinc-200"
                   aria-label="Contact IP Nova"
                 >

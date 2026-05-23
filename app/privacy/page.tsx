@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Network } from "lucide-react";
 
-export const metadata = {
+import { staticPageMetadata } from "@/lib/page-metadata";
+
+export const metadata = staticPageMetadata({
+  path: "/privacy",
   title: "Privacy Policy",
   description:
     "IP Nova privacy policy: data categories, retention, ethical IP sourcing alignment, KYC scope, international transfers, and security measures for enterprise customers.",
-};
+});
 
 export default function PrivacyPage() {
   return (

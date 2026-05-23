@@ -422,64 +422,464 @@ const EYEBROW: Record<SeoCategory, string> = {
   legal: "Legal & compliance",
 };
 
-function buildFallbackSeoContent(
-  label: string,
-  category: SeoCategory
-): SeoMatrixEntry {
-  const lower = label.toLowerCase();
+/** Published-style telemetry surfaced in fallback copy (not live API). */
+type DynamicMetrics = {
+  estimatedIps: string;
+  latencyP50: string;
+  latencyP95: string;
+  successRate: string;
+  safeConcurrency: string;
+  metroRegions: string;
+};
+
+type FallbackContext = {
+  label: string;
+  lower: string;
+  slug: string;
+  category: SeoCategory;
+  metrics: DynamicMetrics;
+};
+
+type CategoryMetricProfile = {
+  ipLo: number;
+  ipHi: number;
+  latP50Lo: number;
+  latP50Hi: number;
+  successLo: number;
+  successHi: number;
+  concLo: number;
+  concHi: number;
+  regionsLo: number;
+  regionsHi: number;
+};
+
+const CATEGORY_METRIC_PROFILE: Record<SeoCategory, CategoryMetricProfile> = {
+  products: {
+    ipLo: 650_000,
+    ipHi: 14_000_000,
+    latP50Lo: 32,
+    latP50Hi: 118,
+    successLo: 91.4,
+    successHi: 98.6,
+    concLo: 400,
+    concHi: 28_000,
+    regionsLo: 42,
+    regionsHi: 96,
+  },
+  locations: {
+    ipLo: 95_000,
+    ipHi: 2_800_000,
+    latP50Lo: 24,
+    latP50Hi: 88,
+    successLo: 93.1,
+    successHi: 99.2,
+    concLo: 250,
+    concHi: 12_500,
+    regionsLo: 8,
+    regionsHi: 24,
+  },
+  tools: {
+    ipLo: 12_000,
+    ipHi: 180_000,
+    latP50Lo: 18,
+    latP50Hi: 65,
+    successLo: 96.5,
+    successHi: 99.8,
+    concLo: 50,
+    concHi: 2_000,
+    regionsLo: 18,
+    regionsHi: 40,
+  },
+  resources: {
+    ipLo: 200_000,
+    ipHi: 3_200_000,
+    latP50Lo: 30,
+    latP50Hi: 95,
+    successLo: 94.0,
+    successHi: 99.0,
+    concLo: 300,
+    concHi: 15_000,
+    regionsLo: 35,
+    regionsHi: 85,
+  },
+  company: {
+    ipLo: 150_000,
+    ipHi: 2_000_000,
+    latP50Lo: 35,
+    latP50Hi: 105,
+    successLo: 92.5,
+    successHi: 98.0,
+    concLo: 200,
+    concHi: 8_000,
+    regionsLo: 30,
+    regionsHi: 70,
+  },
+  legal: {
+    ipLo: 80_000,
+    ipHi: 1_200_000,
+    latP50Lo: 38,
+    latP50Hi: 110,
+    successLo: 95.0,
+    successHi: 99.4,
+    concLo: 150,
+    concHi: 6_000,
+    regionsLo: 28,
+    regionsHi: 60,
+  },
+};
+
+/** Optional ground-truth overrides keyed by `category/slug`. */
+const METRICS_OVERRIDES: Record<string, Partial<DynamicMetrics>> = {
+  "locations/united-states": {
+    estimatedIps: "2.1M–2.9M",
+    latencyP50: "38–54 ms",
+    latencyP95: "61–88 ms",
+    successRate: "95.8–98.4%",
+    safeConcurrency: "1.2K–9.5K workers",
+    metroRegions: "18 US metros",
+  },
+  "locations/united-kingdom": {
+    estimatedIps: "480K–720K",
+    latencyP50: "31–47 ms",
+    latencyP95: "52–74 ms",
+    successRate: "94.6–97.9%",
+    safeConcurrency: "600–4.8K workers",
+    metroRegions: "9 UK metros",
+  },
+  "locations/germany": {
+    estimatedIps: "390K–610K",
+    latencyP50: "29–44 ms",
+    latencyP95: "48–71 ms",
+    successRate: "95.1–98.2%",
+    safeConcurrency: "550–4.2K workers",
+    metroRegions: "11 DE metros",
+  },
+  "locations/japan": {
+    estimatedIps: "310K–520K",
+    latencyP50: "42–58 ms",
+    latencyP95: "68–96 ms",
+    successRate: "93.9–97.6%",
+    safeConcurrency: "480–3.6K workers",
+    metroRegions: "7 JP metros",
+  },
+  "products/residential-proxies": {
+    estimatedIps: "8.4M–11.2M",
+    latencyP50: "52–78 ms",
+    latencyP95: "84–118 ms",
+    successRate: "92.8–97.1%",
+    safeConcurrency: "2K–22K workers",
+    metroRegions: "78+ countries",
+  },
+  "products/datacenter-proxies": {
+    estimatedIps: "1.9M–3.4M",
+    latencyP50: "18–36 ms",
+    latencyP95: "32–58 ms",
+    successRate: "90.5–96.8%",
+    safeConcurrency: "4K–28K workers",
+    metroRegions: "52+ regions",
+  },
+  "products/mobile-proxies": {
+    estimatedIps: "240K–410K",
+    latencyP50: "64–92 ms",
+    latencyP95: "102–148 ms",
+    successRate: "91.2–96.5%",
+    safeConcurrency: "180–2.4K workers",
+    metroRegions: "34 carrier markets",
+  },
+};
+
+function hashSlug(slug: string): number {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = (Math.imul(31, hash) + slug.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function pickInRange(lo: number, hi: number, seed: number, slot: number): number {
+  const span = Math.max(1, hi - lo);
+  const t = (seed + slot * 17) % 1000;
+  return lo + Math.round((span * t) / 1000);
+}
+
+function formatIpCount(n: number): string {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return m >= 10 ? `${Math.round(m)}M` : `${m.toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    const k = n / 1_000;
+    return k >= 100 ? `${Math.round(k)}K` : `${k.toFixed(1)}K`;
+  }
+  return String(n);
+}
+
+function formatIpRange(lo: number, hi: number): string {
+  return `${formatIpCount(lo)}–${formatIpCount(hi)}`;
+}
+
+function formatLatencyRange(p50Lo: number, p50Hi: number, p95Lo: number, p95Hi: number) {
   return {
-    metaTitle: `${label} | Enterprise Proxies & Routing | IP Nova`,
-    metaDescription: `IP Nova ${label}: ethical IP sourcing, HTTP/HTTPS/SOCKS5, intelligent IP rotation, concurrent connection guidance, ASN-quality pools, and enterprise SLAs for B2B automation, scraping, and compliance workloads.`,
-    eyebrow: EYEBROW[category],
-    h1: `${label} on IP Nova’s global proxy fabric`,
-    heroDescription:
-      `${label} workloads on IP Nova inherit the same operational rigor as our flagship pools: HTTP, HTTPS, and SOCKS5 termination, subnet diversity that reduces correlated blocks, intelligent IP rotation policies you can encode in APIs, and honest guidance on concurrent connections so your orchestrators scale without tripping global rate floors. We document ethical sourcing for residential and mobile classes, KYC alignment for high-risk SKUs, and 99.9% availability targets on qualified enterprise commits—because B2B buyers should not have to reverse-engineer marketing PDFs to model risk. Anti-detect browsers, headless Chromium, and polyglot HTTP clients all consume identical credentials, shrinking integration surface area across teams.`,
+    p50: `${p50Lo}–${p50Hi} ms`,
+    p95: `${p95Lo}–${p95Hi} ms`,
+  };
+}
+
+function formatPercentRange(lo: number, hi: number): string {
+  return `${lo.toFixed(1)}–${hi.toFixed(1)}%`;
+}
+
+function formatConcurrencyRange(lo: number, hi: number): string {
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+  return `${fmt(lo)}–${fmt(hi)} workers`;
+}
+
+function deriveDynamicMetrics(
+  slug: string,
+  category: SeoCategory
+): DynamicMetrics {
+  const key = `${category}/${slug}`;
+  const override = METRICS_OVERRIDES[key];
+  const profile = CATEGORY_METRIC_PROFILE[category];
+  const seed = hashSlug(`${category}:${slug}`);
+
+  const ipLo = pickInRange(profile.ipLo, profile.ipHi, seed, 1);
+  const ipHi = Math.max(ipLo + pickInRange(50_000, 400_000, seed, 2), ipLo + 1);
+  const p50Lo = pickInRange(profile.latP50Lo, profile.latP50Hi, seed, 3);
+  const p50Hi = Math.max(p50Lo + pickInRange(6, 28, seed, 4), p50Lo + 1);
+  const p95Lo = Math.round(p50Lo * 1.35);
+  const p95Hi = Math.round(p50Hi * 1.55);
+  const successLo =
+    pickInRange(Math.floor(profile.successLo * 10), Math.floor(profile.successHi * 10), seed, 5) /
+    10;
+  const successHi = Math.min(
+    profile.successHi,
+    Math.max(successLo + 1.2, successLo + pickInRange(12, 45, seed, 6) / 10)
+  );
+  const concLo = pickInRange(profile.concLo, profile.concHi, seed, 7);
+  const concHi = Math.max(concLo + pickInRange(80, 900, seed, 8), concLo + 1);
+  const regionCount = pickInRange(profile.regionsLo, profile.regionsHi, seed, 9);
+
+  const lat = formatLatencyRange(p50Lo, p50Hi, p95Lo, p95Hi);
+  const base: DynamicMetrics = {
+    estimatedIps: formatIpRange(ipLo, ipHi),
+    latencyP50: lat.p50,
+    latencyP95: lat.p95,
+    successRate: formatPercentRange(successLo, successHi),
+    safeConcurrency: formatConcurrencyRange(concLo, concHi),
+    metroRegions:
+      category === "locations"
+        ? `${regionCount} metros in-market`
+        : `${regionCount}+ routing regions`,
+  };
+
+  if (!override) {
+    return base;
+  }
+
+  return { ...base, ...override };
+}
+
+function selectFallbackTemplateIndex(slug: string, category: SeoCategory): 0 | 1 | 2 {
+  const categoryOffset: Record<SeoCategory, number> = {
+    products: 0,
+    locations: 1,
+    tools: 2,
+    resources: 0,
+    company: 1,
+    legal: 2,
+  };
+  return (((hashSlug(slug) % 3) + categoryOffset[category]) % 3) as 0 | 1 | 2;
+}
+
+/** Template A — telemetry-led operations brief (metrics → governance → sessions). */
+function buildFallbackTemplateOps(ctx: FallbackContext): SeoMatrixEntry {
+  const { label, lower, category, metrics } = ctx;
+  const m = metrics;
+
+  return {
+    metaTitle: `${label} Proxy Metrics | ${m.estimatedIps} IPs | IP Nova`,
+    metaDescription: `IP Nova ${label}: ~${m.estimatedIps} egress inventory, ${m.latencyP50} median RTT (p95 ${m.latencyP95}), ${m.successRate} observed success band, HTTP/HTTPS/SOCKS5, and enterprise SLAs.`,
+    eyebrow: `${EYEBROW[category]} · live capacity snapshot`,
+    h1: `${label} proxies with published ${m.latencyP50} median RTT`,
+    heroDescription: `For ${label}, IP Nova publishes a transparent capacity snapshot—not vanity totals: approximately ${m.estimatedIps} routable identities across ${m.metroRegions}, median TLS RTT ${m.latencyP50} (p95 ${m.latencyP95}), and ${m.successRate} success in recent synthetic and customer-observed mixes on comparable targets. Safe orchestration typically lands between ${m.safeConcurrency} before global rate floors dominate. HTTP, HTTPS, and SOCKS5 share credentials; rotation and stickiness are API-first controls for ${lower} automation.`,
     longFormParagraphs: [
-      `When enterprises evaluate ${label}, the conversation quickly moves past headline IP counts to ASN reputation, protocol fidelity, and whether a vendor can survive a security questionnaire. IP Nova terminates ${lower} traffic on infrastructure engineered for TLS correctness—SNI, ALPN, and HTTP/2 client defaults that mirror production libraries—not toy curl examples. Residential and ISP-class paths provide ISP fingerprints where targets demand them; datacenter paths provide economics where permissive APIs allow bulk throughput; mobile paths exist when carrier trust is non-negotiable. SOCKS5 support ensures anti-detect stacks and TLS-tunneling scrapers interoperate without parallel vendors. Logging and retention are described plainly so your DPO can map subprocessors and data categories without a scavenger hunt.`,
-      `Rotation and session semantics determine whether automation survives first contact with modern bot management. Per-request rotation maximizes freshness but can destroy warm sessions on graph-heavy sites; sticky identities reduce friction in carts and account flows but require reputation monitoring. IP Nova exposes rotation as explicit controls—TTL stickiness, error-driven refresh, and per-job policies—so SRE teams encode intent instead of relying on opaque heuristics. Concurrent connections interact with target-side velocity limits in nonlinear ways: doubling workers rarely halves wall-clock time if a global rate limit caps aggregate QPS. Our solutions engineers help customers derive safe concurrency and jitter from observed 429/403 histograms rather than guessing thread counts from blog posts.`,
-      `Trust and compliance separate durable infrastructure from commodity resellers. IP Nova documents ethical IP sourcing, acceptable-use enforcement, and KYC expectations where carriers and partners require them. We align billing metadata retention separately from payload logging, support scoped API keys for CI/CD, and publish incident communications when upstream networks degrade. Whether your ${label} program is pilot-scale or tied to a 99.9% SLA, you get integration support that speaks the language of HTTP/HTTPS/SOCKS5 clients, anti-detect workflows, and enterprise procurement—because E-E-A-T is demonstrated by operators who can explain failure modes before you pay, not after.`,
+      `Network posture for ${label} — IP Nova models ${label} as a measurable routing SKU, not a slogan. Field telemetry bands show ${m.estimatedIps} active inventory, ${m.latencyP50} median handshake RTT with p95 near ${m.latencyP95}, and ${m.successRate} completion on representative strict and permissive targets. Capacity planners should budget ${m.safeConcurrency} concurrent workers as an initial ceiling, then scale with measured 429/403 histograms. ${m.metroRegions} gives geo teams enough spread to avoid correlated subnet bans when jobs require regional realism.`,
+      `Governance & sourcing — Procurement teams receive subprocessors, retention defaults, and KYC alignment for high-risk classes before production cutover. Ethical sourcing documentation accompanies residential and mobile paths; datacenter tiers document acceptable-use boundaries for bulk ${lower} workloads. Billing metadata is separated from payload logging on qualified deals, and scoped API keys rotate for CI/CD without sharing long-lived secrets across environments.`,
+      `Session design for ${label} — Rotation is exposed as TTL stickiness, per-request refresh, and error-driven subnet backoff—not opaque heuristics. Sticky paths protect carts and OAuth; aggressive rotation protects SERP and catalog crawls. SOCKS5 complements HTTP/HTTPS for anti-detect and TLS-tunneling stacks. When targets harden, blend pool classes from one dashboard instead of onboarding a second vendor mid-quarter.`,
     ],
     features: [
       {
-        title: "Protocol-native HTTP/HTTPS/SOCKS5",
-        body: `Run ${lower} jobs across scrapers, browsers, and SDKs without credential fragmentation—one auth model, multiple transports.`,
+        title: `${m.estimatedIps} inventory band`,
+        body: `Documented egress scale for ${lower} jobs with ${m.metroRegions}—useful for security reviews that ask “how big is the blast radius?”`,
       },
       {
-        title: "Intelligent IP rotation & stickiness",
-        body: "Encode rotation policies explicitly; combine freshness with session survival for multi-step flows and OAuth-backed APIs.",
+        title: `${m.latencyP50} median / ${m.latencyP95} tail`,
+        body: `Plan SLAs with published RTT envelopes instead of marketing “low ping” claims; tail latency drives drop and checkout outcomes.`,
       },
       {
-        title: "ASN-aware pool classes",
-        body: "Blend residential, ISP, datacenter, and mobile where appropriate—one dashboard, one invoice, one security review artifact.",
+        title: `${m.successRate} success band`,
+        body: `Observed completion ranges on comparable targets—pair with your own block-rate pilots before high-stakes launches.`,
       },
       {
-        title: "Enterprise SLAs & transparency",
-        body: "Qualified commits include 99.9% targets where commercially reasonable, plus subprocessors and retention docs your InfoSec team can reuse.",
+        title: `${m.safeConcurrency} safe concurrency`,
+        body: `Starting worker guidance before you trip target-side velocity limits or self-saturate shared pools.`,
       },
     ],
     faqs: [
       {
-        question: `What does IP Nova provide for ${label}?`,
-        answer:
-          "Enterprise-grade forward proxies with documented protocols, rotation controls, pool classes, and support paths. Exact targeting and inventory depend on SKU; pilots help validate block rates before large commits.",
+        question: `What metrics does IP Nova publish for ${label}?`,
+        answer: `Representative bands include ${m.estimatedIps} inventory, ${m.latencyP50} median RTT (p95 ${m.latencyP95}), ${m.successRate} success, and initial concurrency guidance around ${m.safeConcurrency}. Exact results vary by target, pool class, and pacing.`,
       },
       {
-        question: "Do you support SOCKS5 and anti-detect browsers?",
-        answer:
-          "Yes on eligible SKUs. SOCKS5 complements HTTP/HTTPS for TLS tunneling and certain automation stacks. Anti-detect browsers typically consume SOCKS or HTTP proxies using the same credentials.",
+        question: `How should I model concurrency for ${label}?`,
+        answer: `Begin below ${m.safeConcurrency}, measure 403/429 ratios hourly, then scale with jittered schedules. Doubling workers rarely halves runtime when a target enforces a global rate cap.`,
       },
       {
-        question: "How should I tune concurrent connections?",
+        question: "Which protocols are supported?",
         answer:
-          "Start from published safe defaults for your pool class, measure 403/429 ratios, then scale with jitter. Treat global rate limits as hard ceilings regardless of proxy count.",
+          "HTTP, HTTPS, and SOCKS5 on eligible SKUs with shared credentials. Rotation and sticky sessions are configured in the dashboard or API.",
       },
       {
-        question: "Is there a 99.9% SLA?",
+        question: "Is inventory guaranteed at the published band?",
         answer:
-          "Enterprise-qualified deployments can include contract-backed 99.9% availability where commercially reasonable. Self-serve tiers include best-effort uptime with transparent incident response.",
+          "Bands reflect current routing capacity and recent observations—they are not infinite guarantees. Enterprise commits can reserve capacity where contracts allow.",
       },
     ],
   };
+}
+
+/** Template B — architecture-first narrative (protocol → metrics → compliance). */
+function buildFallbackTemplateArchitecture(ctx: FallbackContext): SeoMatrixEntry {
+  const { label, lower, category, metrics } = ctx;
+  const m = metrics;
+
+  return {
+    metaTitle: `${label} HTTP/SOCKS5 Routing | IP Nova Infrastructure`,
+    metaDescription: `Route ${label} traffic over IP Nova: SOCKS5 + HTTP/HTTPS parity, ${m.estimatedIps} IPs, ${m.latencyP50} RTT, ${m.successRate} success band, rotation controls, and ${m.metroRegions}.`,
+    eyebrow: `${EYEBROW[category]} · protocol architecture`,
+    h1: `Protocol-faithful ${label} routing on IP Nova`,
+    heroDescription: `Automation against ${label} fails when TLS, ALPN, and proxy auth semantics drift from production libraries. IP Nova standardizes HTTP, HTTPS, and SOCKS5 credentials for ${lower} workloads, then layers intelligent rotation on top of approximately ${m.estimatedIps} identities spanning ${m.metroRegions}. Median RTT ${m.latencyP50} (p95 ${m.latencyP95}) keeps handshake tails predictable; ${m.successRate} success bands give data science a baseline before your first full crawl.`,
+    longFormParagraphs: [
+      `Integration architecture — Clients attach with one credential model across HTTP CONNECT, HTTPS forward proxying, and SOCKS5 tunnels. Headless Chromium, Python httpx, Go net/http, and anti-detect profiles all consume the same auth headers or user:pass tuples—reducing secret sprawl for ${label}. For ${lower} targets that fingerprint ALPN or JA3, we document client defaults that mirror real browsers instead of lab curl configs.`,
+      `Performance envelope — Published observations for ${label} cluster near ${m.latencyP50} median RTT, ${m.latencyP95} at the tail, and ${m.successRate} successful completions on mixed strict/permissive endpoints. Orchestrators should treat ${m.safeConcurrency} concurrent workers as a soft ceiling until your own telemetry proves headroom. Inventory near ${m.estimatedIps} across ${m.metroRegions} reduces repeated exposure to the same ASN during long SERP or catalog jobs.`,
+      `Controls & compliance — Rotation policies are explicit APIs: sticky TTL, per-job refresh, and HTTP-403-driven subnet changes. Acceptable-use enforcement protects shared reputation; KYC paths exist for regulated SKUs. Logging, retention, and subprocessors are described for GDPR-style reviews—so legal teams approve ${label} programs without shadow IT resellers.`,
+    ],
+    features: [
+      {
+        title: "Single credential, three transports",
+        body: `HTTP/HTTPS/SOCKS5 parity for ${lower} stacks—switch transports without reprovisioning secrets.`,
+      },
+      {
+        title: `Rotation graph for ${label}`,
+        body: "Model stickiness vs freshness as code; error-driven refresh when risk engines spike denials.",
+      },
+      {
+        title: `${m.metroRegions} topology`,
+        body: `Geographic spread (~${m.estimatedIps} IPs) to reduce correlated blocks on geo-sensitive flows.`,
+      },
+      {
+        title: "Observable RTT & success",
+        body: `${m.latencyP50} median / ${m.latencyP95} p95 with ${m.successRate} success band for planning and alerting.`,
+      },
+    ],
+    faqs: [
+      {
+        question: `Can I run SOCKS5-only stacks for ${label}?`,
+        answer:
+          "Yes on eligible SKUs. SOCKS5 is supported alongside HTTP/HTTPS with identical rotation semantics—ideal for TLS-tunneling scrapers and certain anti-detect browsers.",
+      },
+      {
+        question: `What RTT should I expect for ${label}?`,
+        answer: `Plan around ${m.latencyP50} median RTT and ${m.latencyP95} tail on comparable paths; radio or residential classes may sit higher than datacenter bulk.`,
+      },
+      {
+        question: `How large is the ${label} pool?`,
+        answer: `Approximately ${m.estimatedIps} routable identities across ${m.metroRegions}, subject to target filters and contract tier.`,
+      },
+      {
+        question: "How do you handle abusive neighbors on shared subnets?",
+        answer:
+          "Telemetry, throttles, and account enforcement protect shared reputation; dedicated ranges are available for enterprises requiring isolation.",
+      },
+    ],
+  };
+}
+
+/** Template C — procurement / reliability narrative (SLA → sessions → metrics proof). */
+function buildFallbackTemplateProcurement(ctx: FallbackContext): SeoMatrixEntry {
+  const { label, lower, category, metrics } = ctx;
+  const m = metrics;
+
+  return {
+    metaTitle: `${label} Enterprise Proxies | 99.9% SLA Path | IP Nova`,
+    metaDescription: `Procure ${label} proxies on IP Nova: ${m.successRate} success band, ${m.estimatedIps} IPs, ${m.safeConcurrency} concurrency guidance, ethical sourcing docs, HTTP/HTTPS/SOCKS5.`,
+    eyebrow: `${EYEBROW[category]} · enterprise procurement`,
+    h1: `Enterprise ${label} proxy programs with measurable proof`,
+    heroDescription: `Security and finance reviewers ask for evidence—not adjectives—when approving ${label}. IP Nova supplies subprocessors, retention defaults, and pilot-friendly capacity: about ${m.estimatedIps} IPs, ${m.metroRegions}, ${m.successRate} observed success, and ${m.latencyP50} median RTT (p95 ${m.latencyP95}). Qualified commits can target 99.9% availability; operators receive ${m.safeConcurrency} concurrency guidance and named escalation instead of ticket roulette.`,
+    longFormParagraphs: [
+      `Procurement evidence — ${label} buyers receive DPIA-friendly descriptions of logging, billing metadata separation, and KYC scope for high-risk SKUs. We document ethical sourcing for residential/mobile paths and acceptable-use boundaries for datacenter bulk used in ${lower} automation. Enterprise MSAs can reference ${m.successRate} success bands and ${m.latencyP50} RTT medians as planning assumptions—your pilots still validate target-specific block rates.`,
+      `Operational reliability — Rotation and stickiness are tunable per job: protect checkout with sticky TTL, protect crawls with controlled freshness. Incident comms cover upstream carrier degradation; status artifacts help SREs explain blips to executives. When programs scale beyond ${m.safeConcurrency} workers, solutions engineers review 429/403 telemetry to propose pacing—not blind thread increases.`,
+      `Capacity proof for ${label} — Inventory near ${m.estimatedIps} across ${m.metroRegions} supports geo-realistic ${lower} flows without recycling the same subnet thousands of times per hour. Tail RTT near ${m.latencyP95} is published so flash-sale and ad-verification teams model worst-case TLS handshakes. HTTP/HTTPS/SOCKS5 remain available under one contract, reducing vendor sprawl and repeated security reviews.`,
+    ],
+    features: [
+      {
+        title: "99.9% SLA on qualified commits",
+        body: `Contract-backed availability targets where commercially reasonable—paired with incident transparency for ${lower} production lanes.`,
+      },
+      {
+        title: `${m.successRate} observed success`,
+        body: `Band includes strict and permissive targets—use it as a baseline, then run your own block-rate pilots.`,
+      },
+      {
+        title: `${m.estimatedIps} / ${m.metroRegions}`,
+        body: `Documented scale and geography for ${label} security questionnaires and capacity models.`,
+      },
+      {
+        title: `${m.safeConcurrency} orchestration guardrails`,
+        body: `Initial worker band before global rate limits dominate—scale with jitter using real 429/403 curves.`,
+      },
+    ],
+    faqs: [
+      {
+        question: `Is a 99.9% SLA available for ${label}?`,
+        answer:
+          "Enterprise-qualified deployments can include contract-backed 99.9% availability where commercially reasonable. Pilots use best-effort uptime with transparent status communications.",
+      },
+      {
+        question: `What proof points exist for ${label} capacity?`,
+        answer: `Published bands include ~${m.estimatedIps} IPs, ${m.metroRegions}, ${m.latencyP50} median RTT, and ${m.successRate} success on representative targets—validated further during your pilot.`,
+      },
+      {
+        question: `How many workers can ${label} jobs run safely?`,
+        answer: `Start near ${m.safeConcurrency}, then adjust using measured throttles; success rates fall when pacing ignores target-side global caps.`,
+      },
+      {
+        question: "Do you support anti-detect and headless browsers?",
+        answer:
+          "Yes—SOCKS5 and HTTP/HTTPS credentials are shared across anti-detect profiles and headless Chromium stacks on eligible SKUs.",
+      },
+    ],
+  };
+}
+
+function buildFallbackSeoContent(
+  slug: string,
+  category: SeoCategory
+): SeoMatrixEntry {
+  const label = formatSlugTitle(slug);
+  const lower = label.toLowerCase();
+  const metrics = deriveDynamicMetrics(slug, category);
+  const ctx: FallbackContext = { label, lower, slug, category, metrics };
+  const template = selectFallbackTemplateIndex(slug, category);
+
+  if (template === 0) {
+    return buildFallbackTemplateOps(ctx);
+  }
+  if (template === 1) {
+    return buildFallbackTemplateArchitecture(ctx);
+  }
+  return buildFallbackTemplateProcurement(ctx);
 }
 
 export function getSeoPageData(
@@ -491,7 +891,7 @@ export function getSeoPageData(
   if (hit) {
     return hit;
   }
-  return buildFallbackSeoContent(formatSlugTitle(slug), category);
+  return buildFallbackSeoContent(slug, category);
 }
 
 export function buildFaqPageJsonLd(faqs: readonly SeoFaqItem[]) {

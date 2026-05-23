@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 
 import { IpLookupClient } from "@/components/tools/ip-lookup-client";
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { IpLookupSeoArticle } from "@/lib/seo-tool-articles";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = staticPageMetadata({
+  path: "/tools/ip-lookup",
   title: "IP Lookup — Public IP, ASN & Geo | IP Nova",
   description:
     "Public IP lookup from IP Nova: discover your public IP, ASN, ISP, city, country, and timezone. Learn how HTTP/HTTPS/SOCKS5 proxies relate to egress identity, concurrent connections, and anti-detect browser stacks—server-side lookup avoids ad blockers.",
-};
+});
 
 export default function IpLookupPage() {
   return (

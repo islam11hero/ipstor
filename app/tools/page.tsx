@@ -3,13 +3,15 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Fingerprint, Gauge, Globe2, Sparkles } from "lucide-react";
 
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = staticPageMetadata({
+  path: "/tools",
   title: "Operator tools",
   description:
     "IP lookup, bulk proxy format validator, and user-agent generator from IP Nova — engineering-grade utilities for operators and developers.",
-};
+});
 
 const glass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl transition-colors hover:border-emerald-500/25 hover:bg-white/[0.035] sm:p-8";
