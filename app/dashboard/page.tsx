@@ -7,17 +7,14 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { FlashToast } from "@/components/dashboard/flash-toast";
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 import { Button } from "@/components/ui/button";
+import { loadDashboardData } from "@/lib/dashboard/load-dashboard-data";
 import { isAdminEmail } from "@/lib/admin";
-import type { DashboardData, UserDeposit, UserProxy } from "@/lib/types/dashboard";
+import type { DashboardData } from "@/lib/types/dashboard";
 import { createClient } from "@/utils/supabase/server";
 
 /** Data is fetched here (SSR); interactive UI including Add Funds → `/api/payment` is in `DashboardClient`. */
 
 export const dynamic = "force-dynamic";
-
-function dashboardLoadError(label: string, message: string) {
-  return `${label}: ${message}`;
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -29,49 +26,14 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [profileResult, proxiesResult, depositsResult] = await Promise.all([
-    supabase.from("profiles").select("balance").eq("id", user.id).maybeSingle(),
-    supabase
-      .from("user_proxies")
-      .select("id, ip_address, port, username, password, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("deposits")
-      .select("id, amount, txid, status, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20),
-  ]);
+  const loaded = await loadDashboardData(supabase, {
+    id: user.id,
+    email: user.email,
+  });
 
-  const loadErrors: string[] = [];
+  const fatalIssues = loaded.issues.filter((issue) => issue.fatal);
 
-  if (profileResult.error) {
-    loadErrors.push(
-      dashboardLoadError("Account balance", profileResult.error.message)
-    );
-  } else if (!profileResult.data) {
-    loadErrors.push(
-      dashboardLoadError(
-        "Account balance",
-        "Your profile record was not found. Run the base Supabase migration (profiles table + signup trigger) or contact support."
-      )
-    );
-  }
-
-  if (proxiesResult.error) {
-    loadErrors.push(
-      dashboardLoadError("Proxy list", proxiesResult.error.message)
-    );
-  }
-
-  if (depositsResult.error) {
-    loadErrors.push(
-      dashboardLoadError("Deposit history", depositsResult.error.message)
-    );
-  }
-
-  if (loadErrors.length > 0) {
+  if (fatalIssues.length > 0) {
     return (
       <>
         <Suspense fallback={<SearchParamsSuspenseFallback />}>
@@ -87,15 +49,22 @@ export default async function DashboardPage() {
                 Could not load your dashboard
               </h1>
               <p className="text-sm text-zinc-400">
-                We could not fetch your account data. Details below may help
-                support diagnose the issue.
+                Supabase schema is out of sync with the app. Apply the setup SQL
+                once, then try again.
               </p>
             </div>
             <ul className="w-full space-y-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-left text-sm text-red-200/90">
-              {loadErrors.map((msg) => (
-                <li key={msg}>{msg}</li>
+              {fatalIssues.map((issue) => (
+                <li key={`${issue.label}-${issue.message}`}>
+                  <span className="font-medium text-red-100">{issue.label}:</span>{" "}
+                  {issue.message}
+                </li>
               ))}
             </ul>
+            <p className="text-xs text-zinc-500">
+              Supabase Dashboard → SQL Editor → paste{" "}
+              <code className="text-zinc-400">supabase/setup_all.sql</code>
+            </p>
             <Button variant="outline" size="sm" render={<Link href="/dashboard" />}>
               Try again
             </Button>
@@ -109,9 +78,9 @@ export default async function DashboardPage() {
 
   const data: DashboardData = {
     email: user.email ?? "",
-    balance: Number(profileResult.data!.balance ?? 0),
-    proxies: (proxiesResult.data ?? []) as UserProxy[],
-    deposits: (depositsResult.data ?? []) as UserDeposit[],
+    balance: loaded.balance,
+    proxies: loaded.proxies,
+    deposits: loaded.deposits,
     isAdmin: isAdminEmail(user.email),
     referralCode: `usr_${idSeg}`,
   };

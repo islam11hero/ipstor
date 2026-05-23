@@ -1,17 +1,38 @@
-# Supabase migrations
+# Supabase setup (required once)
 
-Run these **in order** in the Supabase Dashboard → **SQL Editor** (or `supabase db push`):
+Your dashboard errors mean the **Supabase project schema does not match the app** yet.
 
-1. `migrations/20260523090000_base_schema.sql` — tables (`profiles`, `orders`, `user_proxies`, `deposits`), RLS, signup trigger, backfill for existing users
-2. `migrations/20260523120000_nowpayments_deposit_rpc.sql` — crypto deposit RPC functions
+## Quick fix (recommended)
 
-If the dashboard shows errors like *column user_proxies.username does not exist* or *table public.deposits not found*, step **1** was not applied yet.
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**.
+2. Open **`supabase/setup_all.sql`** in this repo, copy the **entire file**, paste into SQL Editor, click **Run**.
+3. Confirm **Project Settings → API** env vars on Vercel/local match this project:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
+   - `SUPABASE_SERVICE_ROLE_KEY` (server only — needed for admin ops + auto profile repair)
+4. Reload `/dashboard` (or sign out / sign in).
 
-After step 1, existing logins get a `profiles` row automatically; new signups get one via trigger.
+## What `setup_all.sql` creates
 
-Step 2 adds:
+| Object | Purpose |
+|--------|---------|
+| `profiles` | User balance + email |
+| `orders` | Proxy purchase requests |
+| `user_proxies` | Delivered IPs (`username` / `password` columns) |
+| `deposits` | Crypto top-ups |
+| RLS policies | Users read/write own rows |
+| `handle_new_user` trigger | Auto-create `profiles` on signup |
+| RPC functions | NowPayments atomic credit |
 
-- `create_pending_crypto_deposit` — inserts/updates a `pending` deposit when checkout starts
-- `complete_crypto_deposit` — atomically credits `profiles.balance` and marks the deposit `approved`
+## Migration files (same content, split)
 
-Both RPC functions run as `SECURITY DEFINER` and are granted to `service_role` only.
+1. `migrations/20260523090000_base_schema.sql`
+2. `migrations/20260523120000_nowpayments_deposit_rpc.sql`
+
+## Admin account
+
+Admin access is **not** stored in Supabase roles. Only this email can open `/admin` (see `lib/admin.ts`):
+
+`salamasalamaislam@gmail.com`
+
+Sign in with that email in Auth — the base migration backfills a `profiles` row for all existing `auth.users`.
