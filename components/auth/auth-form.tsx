@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getPostAuthRedirectPath } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/client";
 
 type AuthFormProps = {
@@ -49,7 +50,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(getPostAuthRedirectPath(loginEmail.trim()));
     router.refresh();
   }
 
@@ -70,7 +71,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
     }
 
     if (data.session) {
-      router.push("/dashboard");
+      router.push(getPostAuthRedirectPath(registerEmail.trim()));
       router.refresh();
       return;
     }
