@@ -10,6 +10,7 @@ import {
   Loader2,
   MoreHorizontal,
   Shield,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,8 +41,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
+import { describeOrderExtras } from "@/lib/product-catalog";
 import { hoverLift, tapScale } from "@/lib/motion";
-import type { PendingDeposit, PendingOrder } from "@/lib/types/admin";
+import type {
+  AdminRegisteredAccount,
+  AdminUserOrderSummary,
+  PendingDeposit,
+  PendingOrder,
+} from "@/lib/types/admin";
 import {
   formatProductQuantityLabel,
   formatProductTypeLabel,
@@ -60,7 +67,7 @@ type RecentDepositTableRow = {
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
 
-type AdminView = "dashboard" | "orders" | "deposits";
+type AdminView = "dashboard" | "orders" | "deposits" | "accounts";
 
 const ADMIN_VIEW_PARAM = "view";
 
@@ -68,6 +75,9 @@ const ADMIN_VIEW_ALIASES: Record<string, AdminView> = {
   dashboard: "dashboard",
   orders: "orders",
   deposits: "deposits",
+  accounts: "accounts",
+  users: "accounts",
+  "registered-accounts": "accounts",
   "pending-orders": "orders",
   "pending-deposits": "deposits",
 };
@@ -81,6 +91,7 @@ function parseAdminViewParam(raw: string | null): AdminView {
 type AdminPanelProps = {
   deposits: PendingDeposit[];
   orders: PendingOrder[];
+  accounts: AdminRegisteredAccount[];
   activeUserCount: number;
 };
 
@@ -158,6 +169,7 @@ function StatusBadge({
 
 const SIDEBAR: { id: AdminView; label: string; badge?: number }[] = [
   { id: "dashboard", label: "Dashboard" },
+  { id: "accounts", label: "Registered accounts" },
   { id: "orders", label: "Pending Orders" },
   { id: "deposits", label: "Deposits" },
 ];
@@ -165,6 +177,7 @@ const SIDEBAR: { id: AdminView; label: string; badge?: number }[] = [
 function AdminPanelInner({
   deposits,
   orders,
+  accounts,
   activeUserCount,
 }: AdminPanelProps) {
   const router = useRouter();
@@ -185,6 +198,11 @@ function AdminPanelInner({
   );
   const [fulfillTargetOrder, setFulfillTargetOrder] = useState<PendingOrder | null>(null);
   const [rawProxyList, setRawProxyList] = useState("");
+
+  const accountsWithPending = useMemo(
+    () => accounts.filter((account) => account.pending_order_count > 0).length,
+    [accounts]
+  );
 
   const recentDepositRows = useMemo<RecentDepositTableRow[]>(
     () =>
@@ -282,7 +300,9 @@ function AdminPanelInner({
                 ? orders.length
                 : item.id === "deposits"
                   ? deposits.length
-                  : undefined;
+                  : item.id === "accounts"
+                    ? accountsWithPending
+                    : undefined;
             return (
               <button
                 key={item.id}
@@ -304,6 +324,9 @@ function AdminPanelInner({
                   )}
                   {item.id === "deposits" && (
                     <Banknote className="size-4 shrink-0 text-amber-300/90" />
+                  )}
+                  {item.id === "accounts" && (
+                    <Users className="size-4 shrink-0 text-violet-300/90" />
                   )}
                   {item.label}
                 </span>
@@ -364,6 +387,15 @@ function AdminPanelInner({
                         dedicated queues.
                       </p>
                       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-white/12 bg-black/30"
+                          onClick={() => navigateView("accounts")}
+                        >
+                          <Users className="size-4" />
+                          Registered accounts ({accounts.length})
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
@@ -437,6 +469,134 @@ function AdminPanelInner({
                       )}
                     </div>
                   </motion.div>
+                </motion.div>
+              )}
+
+              {view === "accounts" && (
+                <motion.div
+                  className={cn(shellGlass, "overflow-hidden")}
+                  initial={viewMotion.initial}
+                  animate={viewMotion.animate}
+                  transition={viewMotion.transition}
+                >
+                  <motion.div
+                    className="border-b border-white/[0.06] px-6 py-4"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <h2 className="font-heading text-lg font-semibold text-white">
+                      Registered accounts
+                    </h2>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Customer profiles, purchase history, and pending fulfillment
+                      needs.
+                    </p>
+                  </motion.div>
+                  {accounts.length === 0 ? (
+                    <p className="p-10 text-center text-sm text-zinc-500">
+                      No registered accounts yet.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-white/[0.08] hover:bg-transparent">
+                          <TableHead>Account</TableHead>
+                          <TableHead>Balance</TableHead>
+                          <TableHead>Joined</TableHead>
+                          <TableHead>Purchases</TableHead>
+                          <TableHead>Pending needs</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {accounts.map((account) => (
+                          <TableRow
+                            key={account.id}
+                            className="border-white/[0.05] hover:bg-white/[0.02]"
+                          >
+                            <TableCell>
+                              <motion.div
+                                className="flex flex-col"
+                                initial={{ opacity: 0, x: -6 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.18 }}
+                              >
+                                <span className="font-medium text-zinc-100">
+                                  {account.email ?? "No email on file"}
+                                </span>
+                                <span className="font-mono text-xs text-zinc-500">
+                                  {shortId(account.id)}
+                                </span>
+                              </motion.div>
+                            </TableCell>
+                            <TableCell className="font-medium text-emerald-200/90">
+                              {formatCurrency(account.balance)}
+                            </TableCell>
+                            <TableCell className="text-zinc-400">
+                              {formatDate(account.created_at)}
+                            </TableCell>
+                            <TableCell className="max-w-[280px]">
+                              <PurchasesSummary orders={account.orders} />
+                            </TableCell>
+                            <TableCell>
+                              {account.pending_order_count > 0 ? (
+                                <StatusBadge tone="warn">
+                                  {account.pending_order_count} pending
+                                </StatusBadge>
+                              ) : (
+                                <StatusBadge tone="success">None</StatusBadge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-white/12 bg-black/30"
+                                    >
+                                      <MoreHorizontal className="size-4" />
+                                      <span className="sr-only">Account actions</span>
+                                    </Button>
+                                  }
+                                />
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="min-w-44 border-white/10 bg-zinc-950/95 text-zinc-100"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      void copyText(account.id, "User ID")
+                                    }
+                                  >
+                                    Copy user ID
+                                  </DropdownMenuItem>
+                                  {account.email ? (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        void copyText(account.email!, "Email")
+                                      }
+                                    >
+                                      Copy email
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  {account.pending_order_count > 0 ? (
+                                    <DropdownMenuItem
+                                      onClick={() => navigateView("orders")}
+                                    >
+                                      View pending orders
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </motion.div>
               )}
 
@@ -563,7 +723,20 @@ function AdminPanelInner({
                               {shortId(order.id)}
                             </TableCell>
                             <TableCell className="capitalize text-zinc-200">
-                              {formatProductTypeLabel(order.proxy_type)}
+                              <div>{formatProductTypeLabel(order.proxy_type)}</div>
+                              {describeOrderExtras(
+                                order.proxy_type,
+                                order.tier_id,
+                                order.addon_ids
+                              ) ? (
+                                <p className="mt-1 text-xs text-zinc-500">
+                                  {describeOrderExtras(
+                                    order.proxy_type,
+                                    order.tier_id,
+                                    order.addon_ids
+                                  )}
+                                </p>
+                              ) : null}
                             </TableCell>
                             <TableCell>
                               {orderQuantityLabel(order.proxy_type, order.quantity)}
@@ -710,6 +883,31 @@ export function AdminPanel(props: AdminPanelProps) {
 function orderQuantityLabel(proxyType: string, quantity: number) {
   const product = getProduct(proxyType);
   return product ? formatProductQuantityLabel(product, quantity) : String(quantity);
+}
+
+function PurchasesSummary({ orders }: { orders: AdminUserOrderSummary[] }) {
+  const completed = orders.filter((order) => order.status === "completed");
+
+  if (completed.length === 0) {
+    return <span className="text-sm text-zinc-500">No purchases yet</span>;
+  }
+
+  const visible = completed.slice(0, 2);
+  const remaining = completed.length - visible.length;
+
+  return (
+    <div className="space-y-1">
+      {visible.map((order) => (
+        <p key={order.id} className="text-sm text-zinc-300">
+          {formatProductTypeLabel(order.proxy_type)} ·{" "}
+          {orderQuantityLabel(order.proxy_type, order.quantity)}
+        </p>
+      ))}
+      {remaining > 0 ? (
+        <p className="text-xs text-zinc-500">+{remaining} more completed</p>
+      ) : null}
+    </div>
+  );
 }
 
 function MetricTile({

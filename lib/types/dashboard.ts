@@ -22,6 +22,8 @@ export type UserOrder = {
   total_price: number;
   status: "pending" | "completed" | "cancelled" | string;
   created_at: string;
+  tier_id?: string | null;
+  addon_ids?: string[];
 };
 
 export type DashboardData = {

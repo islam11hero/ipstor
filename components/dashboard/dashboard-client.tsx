@@ -36,7 +36,6 @@ import {
   Send,
   Server,
   Shield,
-  ShoppingCart,
   Smartphone,
   TrendingUp,
   Wallet,
@@ -46,7 +45,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { placeOrder } from "@/app/dashboard/actions";
+import { ProductPurchasePage } from "@/components/dashboard/product-purchase-page";
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -83,7 +81,12 @@ import {
   tapScale,
 } from "@/lib/motion";
 import {
-  calculateOrderTotal,
+  describeOrderExtras,
+  isProductDashboardView,
+  productFromViewSlug,
+  viewSlugForProduct,
+} from "@/lib/product-catalog";
+import {
   formatProductQuantityLabel,
   formatProductTypeLabel,
   formatProductUnitPrice,
@@ -103,11 +106,13 @@ type DashboardClientProps = {
 type DashboardView =
   | "overview"
   | "proxies"
-  | "buy"
+  | ProxyProduct
   | "orders"
   | "funds"
   | "developer"
   | "affiliate";
+
+type WorkspaceView = Exclude<DashboardView, ProxyProduct>;
 
 const PRODUCT_ICONS: Record<
   ProxyProduct,
@@ -122,19 +127,13 @@ const PRODUCT_ICONS: Record<
 
 const VIEW_PARAM = "view";
 
-const VIEW_ALIASES: Record<string, DashboardView> = {
+const VIEW_ALIASES: Record<string, WorkspaceView> = {
   overview: "overview",
   proxies: "proxies",
   "my-proxies": "proxies",
   "proxy-list": "proxies",
-  datacenter: "buy",
-  residential: "buy",
-  "static-residential": "buy",
-  static_residential: "buy",
-  isp: "buy",
-  mobile: "buy",
-  buy: "buy",
-  "buy-proxies": "buy",
+  buy: "overview",
+  "buy-proxies": "overview",
   orders: "orders",
   "my-orders": "orders",
   funds: "funds",
@@ -148,20 +147,27 @@ const VIEW_ALIASES: Record<string, DashboardView> = {
   "affiliate-program": "affiliate",
 };
 
-/** Canonical `?view=` slug for each internal view (dense sidebar URLs). */
-const VIEW_QUERY_SLUG: Record<DashboardView, string> = {
+const WORKSPACE_VIEW_SLUG: Record<WorkspaceView, string> = {
   overview: "overview",
   proxies: "my-proxies",
-  buy: "buy-proxies",
   orders: "my-orders",
   funds: "billing",
   developer: "developer-api",
   affiliate: "affiliate",
 };
 
+function viewQuerySlug(view: DashboardView): string {
+  if (isProductDashboardView(view)) {
+    return viewSlugForProduct(view);
+  }
+  return WORKSPACE_VIEW_SLUG[view];
+}
+
 function parseDashboardViewParam(raw: string | null): DashboardView {
   if (!raw) return "overview";
   const key = raw.trim().toLowerCase();
+  const product = productFromViewSlug(key);
+  if (product) return product;
   return VIEW_ALIASES[key] ?? "overview";
 }
 
@@ -275,43 +281,21 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
   const navigateView = useCallback(
     (next: DashboardView) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set(VIEW_PARAM, VIEW_QUERY_SLUG[next]);
+      params.set(VIEW_PARAM, viewQuerySlug(next));
       router.push(`/dashboard?${params.toString()}`, { scroll: false });
     },
     [router, searchParams]
   );
-  const [proxyType, setProxyType] = useState<ProxyProduct>("datacenter");
-  const [quantity, setQuantity] = useState("10");
   const [depositAmount, setDepositAmount] = useState("");
   const [cryptoPayLoading, setCryptoPayLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedButtonId, setCopiedButtonId] = useState<string | null>(null);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectedProduct = useMemo(() => getProduct(proxyType)!, [proxyType]);
-
   const pendingOrdersCount = useMemo(
     () => initialData.orders.filter((order) => order.status === "pending").length,
     [initialData.orders]
   );
-
-  useEffect(() => {
-    const raw = searchParams.get(VIEW_PARAM)?.trim().toLowerCase();
-    if (!raw) return;
-    const productKeys: ProxyProduct[] = [
-      "datacenter",
-      "residential",
-      "static_residential",
-      "isp",
-      "mobile",
-    ];
-    if (productKeys.includes(raw as ProxyProduct)) {
-      setProxyType(raw as ProxyProduct);
-    }
-    if (raw === "static-residential") {
-      setProxyType("static_residential");
-    }
-  }, [searchParams]);
 
   const goView = useCallback(
     (next: DashboardView) => {
@@ -323,8 +307,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
 
   const goBuyProduct = useCallback(
     (product: ProxyProduct) => {
-      setProxyType(product);
-      goView("buy");
+      goView(product);
     },
     [goView]
   );
@@ -366,40 +349,10 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
     [bumpCopiedId]
   );
 
-  const parsedQuantity = Number(quantity) || 0;
-  const orderTotal = useMemo(
-    () => calculateOrderTotal(proxyType, parsedQuantity),
-    [proxyType, parsedQuantity]
-  );
-
   const activeProxies = initialData.proxies.length;
 
   function refresh() {
     router.refresh();
-  }
-
-  function handlePlaceOrder() {
-    startTransition(async () => {
-      const result = await placeOrder({
-        proxyType,
-        quantity: parsedQuantity,
-      });
-
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-
-      if (result.newBalance !== undefined) {
-        setBalance(result.newBalance);
-      }
-
-      toast.success(
-        "Order placed. Track fulfillment status under My orders — proxies appear once our team delivers them."
-      );
-      goView("orders");
-      refresh();
-    });
   }
 
   async function handleCryptoPay(e: React.FormEvent) {
@@ -610,7 +563,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 </button>
                 {PROXY_PRODUCTS.map((product) => {
                   const Icon = PRODUCT_ICONS[product.id];
-                  const buying = view === "buy" && proxyType === product.id;
+                  const buying = view === product.id;
                   return (
                     <button
                       key={product.id}
@@ -895,138 +848,19 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 </motion.div>
               )}
 
-              {view === "buy" && (
-                <div className="space-y-6">
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {PROXY_PRODUCTS.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        title={product.shortLabel}
-                        priceLabel={formatProductUnitPrice(product)}
-                        description={product.description}
-                        icon={PRODUCT_ICONS[product.id]}
-                        selected={proxyType === product.id}
-                        onSelect={() => setProxyType(product.id)}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <Card className={cn(shellGlass)}>
-                      <CardHeader>
-                        <CardTitle>Order calculator</CardTitle>
-                        <CardDescription className="text-zinc-500">
-                          {selectedProduct.unit === "ip"
-                            ? "Enter the number of IPs you need."
-                            : "Enter the bandwidth in gigabytes (GB)."}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="quantity">
-                            {selectedProduct.unit === "ip"
-                              ? "Quantity (IPs)"
-                              : "Quantity (GB)"}
-                          </Label>
-                          <Input
-                            id="quantity"
-                            type="number"
-                            min={1}
-                            step={selectedProduct.unit === "ip" ? 1 : 0.1}
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            className="border-white/10 bg-zinc-950/80"
-                          />
-                        </div>
-                        <p className="text-xs text-zinc-500">
-                          All products are manually provisioned by our team after
-                          payment. Track status in My orders.
-                        </p>
-                        <motion.div className="w-full" {...hoverLift} {...tapScale}>
-                          <Button
-                            className="w-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-black shadow-lg shadow-cyan-500/20 hover:from-emerald-300 hover:to-cyan-300"
-                            disabled={isPending || parsedQuantity <= 0}
-                            onClick={handlePlaceOrder}
-                          >
-                            {isPending ? (
-                              <>
-                                <Loader2 className="animate-spin" />
-                                Processing…
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingCart className="size-4" />
-                                Place order
-                              </>
-                            )}
-                          </Button>
-                        </motion.div>
-                      </CardContent>
-                    </Card>
-
-                    <motion.div {...hoverLift}>
-                      <Card
-                        className={cn(
-                          shellGlass,
-                          "border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.08] via-white/[0.02] to-cyan-500/[0.06] shadow-[0_0_40px_-12px_rgba(34,211,238,0.22)]"
-                        )}
-                      >
-                        <CardHeader>
-                          <CardTitle>Order summary</CardTitle>
-                          <CardDescription className="text-zinc-500">
-                            Live pricing — manual delivery after operator review
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="space-y-3 text-sm">
-                            <p className="flex justify-between">
-                              <span className="text-zinc-500">Product</span>
-                              <span className="font-medium">
-                                {formatProductTypeLabel(proxyType)}
-                              </span>
-                            </p>
-                            <p className="flex justify-between">
-                              <span className="text-zinc-500">Quantity</span>
-                              <span className="font-medium">
-                                {parsedQuantity
-                                  ? formatProductQuantityLabel(
-                                      selectedProduct,
-                                      parsedQuantity
-                                    )
-                                  : "—"}
-                              </span>
-                            </p>
-                            <p className="flex justify-between">
-                              <span className="text-zinc-500">Unit price</span>
-                              <span className="font-medium">
-                                {formatProductUnitPrice(selectedProduct)}
-                              </span>
-                            </p>
-                            <Separator className="bg-white/10" />
-                            <p className="flex justify-between text-base">
-                              <span className="font-medium">Total</span>
-                              <span className="text-xl font-bold text-cyan-300">
-                                {formatCurrency(orderTotal)}
-                              </span>
-                            </p>
-                            <p className="flex justify-between text-xs">
-                              <span className="text-zinc-500">Your balance</span>
-                              <span
-                                className={cn(
-                                  balance >= orderTotal
-                                    ? "text-emerald-400"
-                                    : "text-red-400"
-                                )}
-                              >
-                                {formatCurrency(balance)}
-                              </span>
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  </div>
-                </div>
+              {isProductDashboardView(view) && (
+                <ProductPurchasePage
+                  productId={view}
+                  balance={balance}
+                  icon={PRODUCT_ICONS[view]}
+                  onOrderPlaced={(newBalance) => {
+                    if (typeof newBalance === "number") {
+                      setBalance(newBalance);
+                    }
+                    refresh();
+                    goView("orders");
+                  }}
+                />
               )}
 
               {view === "orders" && (
@@ -1048,7 +882,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                           <button
                             type="button"
                             className="text-emerald-400 underline-offset-2 hover:underline"
-                            onClick={() => goView("buy")}
+                            onClick={() => goBuyProduct("residential")}
                           >
                             Buy proxies
                           </button>{" "}
@@ -1070,6 +904,11 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                             <TableBody>
                               {initialData.orders.map((order) => {
                                 const product = getProduct(order.proxy_type);
+                                const extras = describeOrderExtras(
+                                  order.proxy_type,
+                                  order.tier_id,
+                                  order.addon_ids
+                                );
                                 return (
                                   <TableRow
                                     key={order.id}
@@ -1082,7 +921,10 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                                       {shortOrderId(order.id)}
                                     </TableCell>
                                     <TableCell className="text-sm text-zinc-200">
-                                      {formatProductTypeLabel(order.proxy_type)}
+                                      <span>{formatProductTypeLabel(order.proxy_type)}</span>
+                                      {extras ? (
+                                        <p className="mt-1 text-xs text-zinc-500">{extras}</p>
+                                      ) : null}
                                     </TableCell>
                                     <TableCell className="text-sm text-zinc-300">
                                       {product
@@ -1593,50 +1435,6 @@ function OrderStatusBadge({ status }: { status: string }) {
   );
 }
 
-function ProductCard({
-  title,
-  priceLabel,
-  description,
-  icon: Icon,
-  selected,
-  onSelect,
-}: {
-  title: string;
-  priceLabel: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <motion.button
-      type="button"
-      onClick={onSelect}
-      {...hoverLift}
-      {...tapScale}
-      className={cn(
-        "w-full rounded-2xl border p-5 text-left backdrop-blur-xl transition-all",
-        selected
-          ? "border-cyan-500/45 bg-gradient-to-br from-cyan-500/15 to-zinc-950/80 shadow-[0_0_40px_-8px_rgba(34,211,238,0.35)] ring-1 ring-cyan-500/25"
-          : cn(shellGlass, "hover:border-emerald-500/20")
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex size-11 items-center justify-center rounded-lg bg-cyan-500/10 ring-1 ring-cyan-500/20">
-          <Icon className="size-5 text-cyan-400" />
-        </div>
-        {selected && (
-          <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
-            Selected
-          </Badge>
-        )}
-      </div>
-      <h3 className="font-heading mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-1 text-sm font-medium text-cyan-300">{priceLabel}</p>
-      <p className="mt-2 text-sm text-zinc-400">{description}</p>
-    </motion.button>
-  );
-}
 
 export function DashboardClient(props: DashboardClientProps) {
   return (

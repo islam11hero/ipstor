@@ -207,15 +207,32 @@ async function fetchUserOrders(
   supabase: SupabaseClient,
   userId: string
 ): Promise<{ orders: UserOrder[]; error: string | null }> {
-  const result = await supabase
+  const enriched = await supabase
     .from("orders")
-    .select("id, proxy_type, quantity, total_price, status, created_at")
+    .select(
+      "id, proxy_type, quantity, total_price, status, created_at, tier_id, addons_json"
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(50);
 
+  const result =
+    enriched.error &&
+    (enriched.error.message.includes("tier_id") ||
+      enriched.error.message.includes("addons_json"))
+      ? await supabase
+          .from("orders")
+          .select("id, proxy_type, quantity, total_price, status, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(50)
+      : enriched;
+
   if (!result.error) {
-    return { orders: (result.data ?? []) as UserOrder[], error: null };
+    return {
+      orders: (result.data ?? []).map((row) => mapOrderRow(row as Record<string, unknown>)),
+      error: null,
+    };
   }
 
   if (isMissingRelation(result.error.message, "orders")) {
@@ -223,6 +240,24 @@ async function fetchUserOrders(
   }
 
   return { orders: [], error: result.error.message };
+}
+
+function mapOrderRow(row: Record<string, unknown>): UserOrder {
+  const addonRaw = row.addons_json;
+  const addonIds = Array.isArray(addonRaw)
+    ? addonRaw.filter((item): item is string => typeof item === "string")
+    : [];
+
+  return {
+    id: String(row.id),
+    proxy_type: String(row.proxy_type),
+    quantity: Number(row.quantity),
+    total_price: Number(row.total_price),
+    status: String(row.status ?? "pending"),
+    created_at: String(row.created_at ?? new Date().toISOString()),
+    tier_id: typeof row.tier_id === "string" ? row.tier_id : null,
+    addon_ids: addonIds,
+  };
 }
 
 export async function loadDashboardData(

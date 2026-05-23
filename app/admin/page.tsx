@@ -4,7 +4,7 @@ import { Network } from "lucide-react";
 
 import { AdminPanel } from "@/components/admin/admin-panel";
 import { Button } from "@/components/ui/button";
-import { fetchPendingDeposits } from "@/lib/admin-data";
+import { fetchPendingDeposits, fetchRegisteredAccounts } from "@/lib/admin-data";
 import { isAdminEmail } from "@/lib/admin";
 import type { PendingOrder } from "@/lib/types/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -19,7 +19,45 @@ type OrderRow = {
   quantity: number;
   total_price: number;
   created_at: string;
+  tier_id?: string | null;
+  addons_json?: string[] | null;
 };
+
+async function fetchPendingOrders(
+  supabase: Awaited<ReturnType<typeof getDataClient>>
+): Promise<PendingOrder[]> {
+  const enriched = await supabase
+    .from("orders")
+    .select(
+      "id, user_id, proxy_type, quantity, total_price, created_at, tier_id, addons_json"
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  const result =
+    enriched.error &&
+    (enriched.error.message.includes("tier_id") ||
+      enriched.error.message.includes("addons_json"))
+      ? await supabase
+          .from("orders")
+          .select("id, user_id, proxy_type, quantity, total_price, created_at")
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+      : enriched;
+
+  return ((result.data as OrderRow[] | null) ?? []).map((row) => ({
+    id: row.id,
+    user_id: row.user_id,
+    proxy_type: row.proxy_type,
+    quantity: Number(row.quantity),
+    total_price: Number(row.total_price),
+    created_at: row.created_at,
+    tier_id: row.tier_id ?? null,
+    addon_ids: Array.isArray(row.addons_json)
+      ? row.addons_json.filter((item): item is string => typeof item === "string")
+      : [],
+  }));
+}
 
 async function getDataClient() {
   return createServiceClient() ?? (await createClient());
@@ -41,28 +79,14 @@ export default async function AdminPage() {
 
   const supabase = await getDataClient();
 
-  const [deposits, ordersResult, profilesCountResult] = await Promise.all([
+  const [deposits, orders, profilesCountResult, accounts] = await Promise.all([
     fetchPendingDeposits(supabase),
-    supabase
-      .from("orders")
-      .select("id, user_id, proxy_type, quantity, total_price, created_at")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false }),
+    fetchPendingOrders(supabase),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
+    fetchRegisteredAccounts(supabase),
   ]);
 
   const activeUserCount = profilesCountResult.count ?? 0;
-
-  const orders: PendingOrder[] = (
-    (ordersResult.data as OrderRow[] | null) ?? []
-  ).map((row) => ({
-    id: row.id,
-    user_id: row.user_id,
-    proxy_type: row.proxy_type,
-    quantity: Number(row.quantity),
-    total_price: Number(row.total_price),
-    created_at: row.created_at,
-  }));
 
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-100">
@@ -86,6 +110,7 @@ export default async function AdminPage() {
         <AdminPanel
           deposits={deposits}
           orders={orders}
+          accounts={accounts}
           activeUserCount={activeUserCount}
         />
       </main>

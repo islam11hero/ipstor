@@ -8,6 +8,10 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS tier_id text,
+  ADD COLUMN IF NOT EXISTS addons_json jsonb NOT NULL DEFAULT '[]'::jsonb;
+
 -- orders
 CREATE TABLE IF NOT EXISTS public.orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

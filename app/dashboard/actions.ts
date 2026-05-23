@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { ensureUserProfile } from "@/lib/dashboard/load-dashboard-data";
 import {
-  calculateOrderTotal,
+  calculateOrderQuote,
+  validateOrderSelection,
+} from "@/lib/product-catalog";
+import {
   getProduct,
   isProxyProduct,
   type ProxyProduct,
@@ -28,6 +31,8 @@ async function getAuthenticatedUser() {
 export async function placeOrder(input: {
   proxyType: ProxyProduct;
   quantity: number;
+  tierId?: string;
+  addonIds?: string[];
 }) {
   const auth = await getAuthenticatedUser();
   if (auth.error || !auth.supabase || !auth.user) {
@@ -48,12 +53,27 @@ export async function placeOrder(input: {
     return { error: "Enter a whole number of IPs for this product." };
   }
 
+  const validated = validateOrderSelection({
+    proxyType: input.proxyType,
+    tierId: input.tierId ?? "standard",
+    addonIds: input.addonIds ?? [],
+  });
+  if ("error" in validated) {
+    return { error: validated.error };
+  }
+
   const profile = await ensureUserProfile(auth.supabase, auth.user);
   if (profile.error) {
     return { error: profile.error };
   }
 
-  const totalPrice = calculateOrderTotal(input.proxyType, quantity);
+  const quote = calculateOrderQuote({
+    proxyType: input.proxyType,
+    quantity,
+    tierId: validated.tierId,
+    addonIds: validated.addonIds,
+  });
+  const totalPrice = quote.total;
   const currentBalance = profile.balance;
 
   if (currentBalance < totalPrice) {
@@ -73,17 +93,32 @@ export async function placeOrder(input: {
     return { error: balanceError.message };
   }
 
-  const { data: order, error: orderError } = await auth.supabase
+  const orderPayload = {
+    user_id: auth.user.id,
+    proxy_type: input.proxyType,
+    quantity,
+    total_price: totalPrice,
+    status: "pending" as const,
+    tier_id: validated.tierId,
+    addons_json: validated.addonIds,
+  };
+
+  let orderResult = await auth.supabase
     .from("orders")
-    .insert({
-      user_id: auth.user.id,
-      proxy_type: input.proxyType,
-      quantity,
-      total_price: totalPrice,
-      status: "pending",
-    })
+    .insert(orderPayload)
     .select("id")
     .single();
+
+  if (orderResult.error?.message?.includes("addons_json")) {
+    const { tier_id: _tier, addons_json: _addons, ...legacyPayload } = orderPayload;
+    orderResult = await auth.supabase
+      .from("orders")
+      .insert(legacyPayload)
+      .select("id")
+      .single();
+  }
+
+  const { data: order, error: orderError } = orderResult;
 
   if (orderError || !order) {
     await auth.supabase

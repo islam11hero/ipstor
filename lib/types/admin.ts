@@ -14,4 +14,25 @@ export type PendingOrder = {
   quantity: number;
   total_price: number;
   created_at: string;
+  tier_id?: string | null;
+  addon_ids?: string[];
+};
+
+export type AdminUserOrderSummary = {
+  id: string;
+  proxy_type: string;
+  quantity: number;
+  total_price: number;
+  status: "pending" | "completed" | "cancelled";
+  created_at: string;
+};
+
+export type AdminRegisteredAccount = {
+  id: string;
+  email: string | null;
+  balance: number;
+  created_at: string;
+  orders: AdminUserOrderSummary[];
+  pending_order_count: number;
+  completed_order_count: number;
 };

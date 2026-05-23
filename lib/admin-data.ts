@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { PendingDeposit } from "@/lib/types/admin";
+import type {
+  AdminRegisteredAccount,
+  AdminUserOrderSummary,
+  PendingDeposit,
+} from "@/lib/types/admin";
 
 type DepositRow = {
   id: string;
@@ -54,6 +58,84 @@ export async function fetchPendingDeposits(
     created_at: row.created_at,
     user_email: emailByUserId.get(row.user_id) ?? null,
   }));
+}
+
+type ProfileRow = {
+  id: string;
+  email: string | null;
+  balance: number;
+  created_at: string;
+};
+
+type OrderSummaryRow = {
+  id: string;
+  user_id: string;
+  proxy_type: string;
+  quantity: number;
+  total_price: number;
+  status: string;
+  created_at: string;
+};
+
+function mapOrderSummary(row: OrderSummaryRow): AdminUserOrderSummary {
+  const status = row.status;
+  const normalizedStatus: AdminUserOrderSummary["status"] =
+    status === "completed" || status === "cancelled" ? status : "pending";
+
+  return {
+    id: row.id,
+    proxy_type: row.proxy_type,
+    quantity: Number(row.quantity),
+    total_price: Number(row.total_price),
+    status: normalizedStatus,
+    created_at: row.created_at,
+  };
+}
+
+export async function fetchRegisteredAccounts(
+  supabase: SupabaseClient
+): Promise<AdminRegisteredAccount[]> {
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, email, balance, created_at")
+    .order("created_at", { ascending: false });
+
+  if (profilesError || !profiles?.length) {
+    return [];
+  }
+
+  const profileRows = profiles as ProfileRow[];
+  const userIds = profileRows.map((profile) => profile.id);
+
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, user_id, proxy_type, quantity, total_price, status, created_at")
+    .in("user_id", userIds)
+    .order("created_at", { ascending: false });
+
+  const ordersByUser = new Map<string, AdminUserOrderSummary[]>();
+  for (const row of (orders as OrderSummaryRow[] | null) ?? []) {
+    const list = ordersByUser.get(row.user_id) ?? [];
+    list.push(mapOrderSummary(row));
+    ordersByUser.set(row.user_id, list);
+  }
+
+  return profileRows.map((profile) => {
+    const userOrders = ordersByUser.get(profile.id) ?? [];
+    const pendingOrders = userOrders.filter((order) => order.status === "pending");
+
+    return {
+      id: profile.id,
+      email: profile.email,
+      balance: Number(profile.balance ?? 0),
+      created_at: profile.created_at,
+      orders: userOrders,
+      pending_order_count: pendingOrders.length,
+      completed_order_count: userOrders.filter(
+        (order) => order.status === "completed"
+      ).length,
+    };
+  });
 }
 
 function mapDepositRow(row: DepositRow): PendingDeposit {
