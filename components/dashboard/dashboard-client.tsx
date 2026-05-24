@@ -45,7 +45,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 
-import { BrandLogo, IconSpinner, LordIcon } from "@/components/icons";
+import { BrandMark, IconSpinner, LordIcon } from "@/components/icons";
 import { toast } from "sonner";
 
 
@@ -486,7 +486,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
               <List className="size-5" />
             </Button>
           <Link href="/" className="flex min-w-0 items-center gap-2.5">
-            <BrandLogo size={36} trigger="hover" />
+            <BrandMark size={36} />
             <div>
               <span className="font-heading text-base font-semibold tracking-tight text-white">
                 IP Nova

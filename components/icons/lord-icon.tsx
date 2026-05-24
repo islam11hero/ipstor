@@ -1,9 +1,16 @@
 "use client";
 
-import { Player } from "@lordicon/react";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import type { Player } from "@lordicon/react";
 
 import { cn } from "@/lib/utils";
+
+const LordIconPlayer = dynamic(
+  () =>
+    import("@/components/icons/lord-icon-player").then((mod) => mod.LordIconPlayer),
+  { ssr: false }
+);
 
 export type LordIconName =
   | "network"
@@ -43,6 +50,7 @@ export function LordIcon({
 }: LordIconProps) {
   const playerRef = useRef<Player>(null);
   const [iconData, setIconData] = useState<object | null>(null);
+  const [playerReady, setPlayerReady] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -56,7 +64,7 @@ export function LordIcon({
 
   useEffect(() => {
     if (trigger !== "once" && trigger !== "loop") return;
-    if (!iconData) return;
+    if (!playerReady) return;
     if (trigger === "once") {
       playerRef.current?.playFromBeginning();
       return;
@@ -65,7 +73,7 @@ export function LordIcon({
       playerRef.current?.playFromBeginning();
     }, 2800);
     return () => window.clearInterval(id);
-  }, [iconData, trigger]);
+  }, [playerReady, trigger]);
 
   if (!iconData) {
     return (
@@ -88,12 +96,13 @@ export function LordIcon({
         trigger === "hover" ? () => playerRef.current?.playFromBeginning() : undefined
       }
     >
-      <Player
+      <LordIconPlayer
         ref={playerRef}
         icon={iconData}
         size={size}
         colors={colors}
         onReady={() => {
+          setPlayerReady(true);
           if (trigger === "loop" || trigger === "once") {
             playerRef.current?.playFromBeginning();
           }

@@ -148,7 +148,8 @@ async function fetchUserProxies(
     .from("user_proxies")
     .select("id, ip_address, port, username, password, created_at, order_id")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(2000);
 
   if (!modern.error) {
     return {
@@ -171,7 +172,8 @@ async function fetchUserProxies(
       .from("user_proxies")
       .select("id, ip_address, port, proxy_user, proxy_pass, created_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(2000);
 
     if (!legacy.error) {
       return {
@@ -186,7 +188,8 @@ async function fetchUserProxies(
       .from("user_proxies")
       .select("id, ip_address, port, created_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(2000);
 
     if (!minimal.error) {
       return {

@@ -16,7 +16,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 
 import { FaqDetailsSection } from "@/components/seo/faq-details-section";
-import { BrandLogo } from "@/components/icons";
+import { BrandMark } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -261,7 +261,7 @@ export default async function SeoLandingPage({ params }: PageProps) {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <BrandLogo size={36} trigger="hover" />
+            <BrandMark size={36} />
             <span className="font-heading text-base font-semibold tracking-tight text-white">
               IP Nova
             </span>

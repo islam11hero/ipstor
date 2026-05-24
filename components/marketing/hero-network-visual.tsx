@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 import { SparklesCore } from "@/components/motion/sparkles-core";
@@ -32,18 +32,44 @@ const nodes = [
 ] as const;
 
 export function HeroNetworkVisual() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [showGlobe, setShowGlobe] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setShowGlobe(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px", threshold: 0.15 }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="relative mx-auto min-h-[420px] w-full max-w-xl lg:max-w-none">
-      <SparklesCore particleCount={56} className="opacity-70" />
+    <div
+      ref={containerRef}
+      className="relative mx-auto min-h-[420px] w-full max-w-xl lg:max-w-none"
+    >
+      <SparklesCore particleCount={40} className="opacity-70" />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[280px] w-[280px] sm:h-[320px] sm:w-[320px]">
-        {mounted ? (
+        {showGlobe ? (
           <ProxyNetworkGlobe className="h-full w-full opacity-90" />
         ) : null}
       </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BrandLogo } from "@/components/icons";
+import { BrandMark } from "@/components/icons";
 
 import { staticPageMetadata } from "@/lib/page-metadata";
 
@@ -20,7 +20,7 @@ export default function AboutPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 text-sm text-zinc-400 hover:text-white">
-            <BrandLogo size={36} trigger="hover" />
+            <BrandMark size={36} />
             <span className="font-heading font-semibold text-white">IP Nova</span>
           </Link>
           <Link href="/login" className="text-sm text-zinc-500 hover:text-white">

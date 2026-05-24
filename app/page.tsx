@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
+import dynamic from "next/dynamic";
+
 import { HomeFaqSection, HOME_PAGE_FAQS } from "@/components/marketing/home-faq-section";
-import { MarketingHome } from "@/components/marketing/marketing-home";
 import { canonicalUrl } from "@/lib/page-metadata";
 import { buildFaqPageJsonLd } from "@/lib/seo-data";
 import { SITE_URL } from "@/lib/site-url";
@@ -49,6 +50,19 @@ const websiteJsonLd = {
 };
 
 const faqJsonLd = buildFaqPageJsonLd([...HOME_PAGE_FAQS]);
+
+const MarketingHome = dynamic(
+  () =>
+    import("@/components/marketing/marketing-home").then((mod) => mod.MarketingHome),
+  {
+    loading: () => (
+      <div
+        className="min-h-[80vh] animate-pulse bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(34,211,238,0.06),transparent)]"
+        aria-hidden
+      />
+    ),
+  }
+);
 
 export default function Home() {
   return (

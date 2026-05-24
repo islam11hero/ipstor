@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { EnvelopeSimple, PaperPlaneTilt, ShareNetwork } from "@phosphor-icons/react";
 
-import { BrandLogo } from "@/components/icons";
+import { BrandMark } from "@/components/icons";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -189,7 +189,7 @@ export function Footer() {
               href="/"
               className="inline-flex items-center gap-2 font-heading text-base font-semibold tracking-tight text-white"
             >
-              <BrandLogo size={40} trigger="hover" />
+              <BrandMark size={40} />
               IP Nova
             </Link>
 

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { redirect } from "next/navigation";
-import { BrandLogo } from "@/components/icons";
+import { BrandMark } from "@/components/icons";
 
 import { AdminLoading } from "@/components/admin/admin-loading";
 import { Button } from "@/components/ui/button";
-import { fetchPendingDeposits, fetchRegisteredAccounts } from "@/lib/admin-data";
+import { fetchPendingDeposits, fetchRegisteredAccountDetail, fetchRegisteredAccounts } from "@/lib/admin-data";
 import { isAdminEmail } from "@/lib/admin";
 import type { PendingOrder } from "@/lib/types/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -69,7 +69,12 @@ async function getDataClient() {
   return createServiceClient() ?? (await createClient());
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ user?: string }>;
+}) {
+  const { user: selectedUserId } = await searchParams;
   const authClient = await createClient();
   const {
     data: { user },
@@ -85,12 +90,24 @@ export default async function AdminPage() {
 
   const supabase = await getDataClient();
 
-  const [deposits, orders, profilesCountResult, accounts] = await Promise.all([
+  const [deposits, orders, profilesCountResult, accountsBase] = await Promise.all([
     fetchPendingDeposits(supabase),
     fetchPendingOrders(supabase),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     fetchRegisteredAccounts(supabase),
   ]);
+
+  let accounts = accountsBase;
+  if (selectedUserId) {
+    const detail = await fetchRegisteredAccountDetail(supabase, selectedUserId);
+    if (detail) {
+      accounts = accounts.some((account) => account.id === selectedUserId)
+        ? accounts.map((account) =>
+            account.id === selectedUserId ? detail : account
+          )
+        : [detail, ...accounts];
+    }
+  }
 
   const activeUserCount = profilesCountResult.count ?? 0;
 
@@ -99,7 +116,7 @@ export default async function AdminPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <BrandLogo size={36} trigger="hover" />
+            <BrandMark size={36} />
             <span className="font-heading text-base font-semibold tracking-tight text-white">
               IP Nova
             </span>

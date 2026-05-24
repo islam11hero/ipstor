@@ -4,9 +4,12 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: [
       "@phosphor-icons/react",
+      "@lordicon/react",
       "framer-motion",
       "gsap",
       "lottie-react",
+      "three",
+      "@react-three/fiber",
       "@react-three/drei",
     ],
   },

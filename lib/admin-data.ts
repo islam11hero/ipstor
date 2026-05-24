@@ -162,9 +162,12 @@ function groupByUserId<T extends { user_id: string }>(
   return map;
 }
 
+const ADMIN_ROW_LIMIT = 2500;
+
 async function fetchAllUserProxies(
   supabase: SupabaseClient,
-  userIds: string[]
+  userIds: string[],
+  rowLimit = ADMIN_ROW_LIMIT
 ): Promise<Map<string, UserProxy[]>> {
   if (userIds.length === 0) return new Map();
 
@@ -172,7 +175,8 @@ async function fetchAllUserProxies(
     .from("user_proxies")
     .select("id, user_id, ip_address, port, username, password, created_at, order_id")
     .in("user_id", userIds)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(rowLimit);
 
   let rows: Record<string, unknown>[] = [];
 
@@ -186,7 +190,8 @@ async function fetchAllUserProxies(
       .from("user_proxies")
       .select("id, user_id, ip_address, port, proxy_user, proxy_pass, created_at")
       .in("user_id", userIds)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(rowLimit);
 
     if (!fallback.error && fallback.data) {
       rows = fallback.data as Record<string, unknown>[];
@@ -203,6 +208,75 @@ async function fetchAllUserProxies(
   }
 
   return byUser;
+}
+
+function buildRegisteredAccount(
+  profile: ProfileRow,
+  userOrders: AdminUserOrderSummary[],
+  userDeposits: UserDeposit[],
+  userProxies: UserProxy[]
+): AdminRegisteredAccount {
+  const pendingOrders = userOrders.filter((order) => order.status === "pending");
+
+  return {
+    id: profile.id,
+    email: profile.email,
+    balance: Number(profile.balance ?? 0),
+    created_at: profile.created_at,
+    orders: userOrders,
+    pending_order_count: pendingOrders.length,
+    completed_order_count: userOrders.filter((order) => order.status === "completed")
+      .length,
+    accountStats: computeAccountStats({
+      balance: Number(profile.balance ?? 0),
+      memberSince: profile.created_at,
+      proxies: userProxies,
+      deposits: userDeposits,
+      orders: userOrders.map(mapOrderForStats),
+    }),
+  };
+}
+
+/** Full account detail for one user — used when drilling into a profile. */
+export async function fetchRegisteredAccountDetail(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<AdminRegisteredAccount | null> {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id, email, balance, created_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error || !profile) return null;
+
+  const [ordersResult, depositsResult, proxiesByUser] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, user_id, proxy_type, quantity, total_price, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("deposits")
+      .select("id, user_id, amount, txid, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+    fetchAllUserProxies(supabase, [userId], 100_000),
+  ]);
+
+  const userOrders = ((ordersResult.data as OrderSummaryRow[] | null) ?? []).map(
+    mapOrderSummary
+  );
+  const userDeposits = ((depositsResult.data as DepositRowAll[] | null) ?? []).map(
+    mapDepositForStats
+  );
+
+  return buildRegisteredAccount(
+    profile as ProfileRow,
+    userOrders,
+    userDeposits,
+    proxiesByUser.get(userId) ?? []
+  );
 }
 
 export async function fetchRegisteredAccounts(
@@ -225,12 +299,14 @@ export async function fetchRegisteredAccounts(
       .from("orders")
       .select("id, user_id, proxy_type, quantity, total_price, status, created_at")
       .in("user_id", userIds)
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(ADMIN_ROW_LIMIT),
     supabase
       .from("deposits")
       .select("id, user_id, amount, txid, status, created_at")
       .in("user_id", userIds)
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(ADMIN_ROW_LIMIT),
     fetchAllUserProxies(supabase, userIds),
   ]);
 
@@ -247,30 +323,10 @@ export async function fetchRegisteredAccounts(
 
   return profileRows.map((profile) => {
     const userOrders = ordersByUser.get(profile.id) ?? [];
-    const pendingOrders = userOrders.filter((order) => order.status === "pending");
     const userDeposits = (depositsByUser.get(profile.id) ?? []).map(mapDepositForStats);
     const userProxies = proxiesByUser.get(profile.id) ?? [];
 
-    const accountStats = computeAccountStats({
-      balance: Number(profile.balance ?? 0),
-      memberSince: profile.created_at,
-      proxies: userProxies,
-      deposits: userDeposits,
-      orders: userOrders.map(mapOrderForStats),
-    });
-
-    return {
-      id: profile.id,
-      email: profile.email,
-      balance: Number(profile.balance ?? 0),
-      created_at: profile.created_at,
-      orders: userOrders,
-      pending_order_count: pendingOrders.length,
-      completed_order_count: userOrders.filter(
-        (order) => order.status === "completed"
-      ).length,
-      accountStats,
-    };
+    return buildRegisteredAccount(profile, userOrders, userDeposits, userProxies);
   });
 }
 
