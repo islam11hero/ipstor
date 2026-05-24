@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Check, Copy, Sparkles } from "lucide-react";
+import { Check, Copy, Sparkle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -124,7 +124,7 @@ export function UserAgentGeneratorClient() {
         aria-hidden
       />
       <div className="flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-violet-400/90 uppercase">
-        <Sparkles className="size-3.5" aria-hidden />
+        <Sparkle className="size-4.5" weight="duotone" aria-hidden />
         Utility
       </div>
       <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -209,7 +209,7 @@ export function UserAgentGeneratorClient() {
                 aria-label="Copy user-agent"
               >
                 {copiedIdx === idx ? (
-                  <Check className="size-4 text-emerald-400" />
+                  <Check className="size-5 text-emerald-400" />
                 ) : (
                   <Copy className="size-4" />
                 )}

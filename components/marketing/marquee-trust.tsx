@@ -1,12 +1,13 @@
-import { Box, Hexagon, Triangle } from "lucide-react";
+import { Cube, Hexagon, Triangle } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 
-const partners = [
+const partners: { Icon: Icon; name: string }[] = [
   { Icon: Hexagon, name: "Acme Corp" },
   { Icon: Triangle, name: "TechNode" },
-  { Icon: Box, name: "DataScrape" },
+  { Icon: Cube, name: "DataScrape" },
   { Icon: Hexagon, name: "AdVerify" },
   { Icon: Triangle, name: "NorthGrid" },
-  { Icon: Box, name: "Signal Labs" },
+  { Icon: Cube, name: "Signal Labs" },
   { Icon: Hexagon, name: "Atlas Intel" },
   { Icon: Triangle, name: "Meridian AI" },
 ];
@@ -19,7 +20,7 @@ function PartnerRow({ id }: { id: string }) {
           key={`${id}-${name}`}
           className="flex items-center gap-3 opacity-50 grayscale transition-opacity hover:opacity-70"
         >
-          <Icon className="size-5 text-zinc-500" strokeWidth={1.25} aria-hidden />
+          <Icon className="size-5 text-zinc-500" weight="duotone" aria-hidden />
           <span className="whitespace-nowrap font-heading text-sm font-medium tracking-tight text-zinc-400">
             {name}
           </span>

@@ -1,16 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import type { Icon } from "@phosphor-icons/react";
 import {
-  Award,
   Calendar,
   Clock,
+  Lightning,
+  Medal,
   Package,
   ShoppingBag,
-  TrendingUp,
-  Wallet,
-  Zap,
-} from "lucide-react";
+  TrendUp,
+} from "@phosphor-icons/react";
+
+import { LordIcon, type LordIconName } from "@/components/icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,9 +59,11 @@ function formatRelativeDate(iso: string | null): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function activityIcon(kind: UserAccountStats["recentActivity"][number]["kind"]) {
-  if (kind === "deposit") return Wallet;
-  if (kind === "proxy") return Zap;
+function activityIcon(
+  kind: UserAccountStats["recentActivity"][number]["kind"]
+): Icon | null {
+  if (kind === "deposit") return null;
+  if (kind === "proxy") return Lightning;
   return ShoppingBag;
 }
 
@@ -68,12 +72,14 @@ function StatTile({
   value,
   hint,
   icon: Icon,
+  lordIcon,
   tone = "default",
 }: {
   label: string;
   value: string;
   hint?: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: Icon;
+  lordIcon?: LordIconName;
   tone?: "default" | "warn" | "success";
 }) {
   const toneClass =
@@ -89,8 +95,12 @@ function StatTile({
         <p className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
           {label}
         </p>
-        <div className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
-          <Icon className="size-4 text-emerald-400/90" />
+        <div className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
+          {lordIcon ? (
+            <LordIcon name={lordIcon} size={28} trigger="hover" />
+          ) : Icon ? (
+            <Icon className="size-5 text-emerald-400/90" weight="duotone" />
+          ) : null}
         </div>
       </div>
       <p className={cn("mt-3 font-heading text-2xl font-bold tracking-tight", toneClass)}>
@@ -120,7 +130,7 @@ export function AccountOverview({
               Account overview
             </h2>
             <Badge className={cn("border", tierBadgeClass(stats.accountTier))}>
-              <Award className="mr-1 size-3" />
+              <Medal className="mr-1 size-3" weight="duotone" />
               {stats.tierLabel}
             </Badge>
           </div>
@@ -143,14 +153,14 @@ export function AccountOverview({
           label="Wallet balance"
           value={formatCurrency(liveBalance)}
           hint="Available to spend"
-          icon={Wallet}
+          lordIcon="wallet"
           tone="success"
         />
         <StatTile
           label="Lifetime spend"
           value={formatCurrency(stats.totalSpent)}
           hint={`${stats.completedOrdersCount} completed order${stats.completedOrdersCount === 1 ? "" : "s"}`}
-          icon={TrendingUp}
+          icon={TrendUp}
         />
         <StatTile
           label="Total deposited"
@@ -160,13 +170,13 @@ export function AccountOverview({
               ? `${formatCurrency(stats.pendingDepositAmount)} pending`
               : "Approved top-ups"
           }
-          icon={Wallet}
+          lordIcon="wallet"
         />
         <StatTile
           label="Active proxies"
           value={String(stats.activeProxiesCount)}
           hint={stats.lastProxyAt ? `Last delivery ${formatRelativeDate(stats.lastProxyAt)}` : "None delivered yet"}
-          icon={Zap}
+          lordIcon="zap"
         />
         <StatTile
           label="Pending orders"
@@ -259,7 +269,11 @@ export function AccountOverview({
                       className="flex gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5"
                     >
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                        <Icon className="size-4 text-emerald-400" />
+                        {Icon ? (
+                          <Icon className="size-5 text-emerald-400" weight="duotone" />
+                        ) : (
+                          <LordIcon name="wallet" size={28} trigger="hover" />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-zinc-200">{item.title}</p>
@@ -376,7 +390,7 @@ export function AccountOverview({
             value={formatRelativeDate(stats.lastDepositAt)}
           />
           <MiniFact
-            icon={Zap}
+            icon={Lightning}
             label="Last delivery"
             value={formatRelativeDate(stats.lastProxyAt)}
           />
@@ -400,13 +414,13 @@ function MiniFact({
   label,
   value,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: Icon;
   label: string;
   value: string;
 }) {
   return (
     <div className={cn(shellGlass, "flex items-center gap-3 p-4")}>
-      <Icon className="size-4 shrink-0 text-zinc-500" />
+      <Icon className="size-5 shrink-0 text-zinc-500" weight="duotone" />
       <div>
         <p className="text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
           {label}

@@ -1,7 +1,11 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMemo, useState, useTransition } from "react";
-import { Loader2, ShoppingCart, Sparkles } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
+import { ShoppingCart, Sparkle } from "@phosphor-icons/react";
+
+import { IconSpinner, LordIcon } from "@/components/icons";
 import { toast } from "sonner";
 
 import { placeOrder } from "@/app/dashboard/actions";
@@ -31,7 +35,6 @@ import {
   type ProxyProduct,
 } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
@@ -39,7 +42,7 @@ const shellGlass =
 type ProductPurchasePageProps = {
   productId: ProxyProduct;
   balance: number;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: Icon;
   onOrderPlaced: (newBalance?: number) => void;
 };
 
@@ -138,7 +141,7 @@ export function ProductPurchasePage({
               transition={{ delay: 0.12 }}
             >
               <motion.div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 ring-1 ring-emerald-500/20">
-                <Icon className="size-7 text-emerald-400" />
+                <Icon size={34} weight="duotone" className="text-emerald-400" />
               </motion.div>
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-emerald-400/90 uppercase">
@@ -165,7 +168,7 @@ export function ProductPurchasePage({
                 key={item}
                 className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2 text-sm text-zinc-400"
               >
-                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
+                <Sparkle className="mt-0.5 size-3.5 shrink-0 text-emerald-400" weight="fill" />
                 {item}
               </li>
             ))}
@@ -332,7 +335,7 @@ export function ProductPurchasePage({
               >
                 {isPending ? (
                   <>
-                    <Loader2 className="animate-spin" />
+                    <IconSpinner className="size-5" />
                     Processing…
                   </>
                 ) : (

@@ -13,38 +13,39 @@ import {
   useState,
   useTransition,
 } from "react";
+import type { Icon } from "@phosphor-icons/react";
 import {
-  BookMarked,
   BookOpen,
-  Braces,
-  Building2,
+  Bookmark,
+  BracketsCurly,
+  Buildings,
+  ChatCircle,
   Check,
-  ClipboardList,
+  ClipboardText,
   Copy,
-  Download,
-  Flame,
+  DeviceMobile,
+  DownloadSimple,
+  Fire,
   Globe,
-  Globe2,
+  GlobeHemisphereWest,
   HardDrive,
-  LayoutDashboard,
-  Loader2,
+  HardDrives,
+  Lightning,
+  List,
   Lock,
-  Menu,
-  MessageCircle,
   Monitor,
-  Music,
-  Network,
-  Send,
-  Server,
+  MusicNote,
+  PaperPlaneTilt,
+  ShareNetwork,
   Shield,
-  Smartphone,
-  TrendingUp,
+  SquaresFour,
+  TrendUp,
   UserCircle,
-  Wallet,
-  Wifi,
+  WifiHigh,
   X,
-  Zap,
-} from "lucide-react";
+} from "@phosphor-icons/react";
+
+import { BrandLogo, IconSpinner, LordIcon } from "@/components/icons";
 import { toast } from "sonner";
 
 
@@ -158,15 +159,12 @@ type DashboardView =
 
 type WorkspaceView = Exclude<DashboardView, ProxyProduct>;
 
-const PRODUCT_ICONS: Record<
-  ProxyProduct,
-  React.ComponentType<{ className?: string }>
-> = {
-  datacenter: Server,
-  residential: Globe,
-  static_residential: Building2,
-  isp: Network,
-  mobile: Smartphone,
+const PRODUCT_ICONS: Record<ProxyProduct, Icon> = {
+  datacenter: HardDrives,
+  residential: GlobeHemisphereWest,
+  static_residential: Buildings,
+  isp: ShareNetwork,
+  mobile: DeviceMobile,
 };
 
 const VIEW_PARAM = "view";
@@ -223,12 +221,12 @@ const SETUP_GUIDE_ITEMS: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }[] = [
-  { icon: Globe2, label: "Google Chrome" },
-  { icon: Flame, label: "Mozilla Firefox" },
-  { icon: Send, label: "Telegram" },
-  { icon: MessageCircle, label: "WhatsApp" },
-  { icon: Music, label: "TikTok" },
-  { icon: Smartphone, label: "Android" },
+  { icon: Globe, label: "Google Chrome" },
+  { icon: Fire, label: "Mozilla Firefox" },
+  { icon: PaperPlaneTilt, label: "Telegram" },
+  { icon: ChatCircle, label: "WhatsApp" },
+  { icon: MusicNote, label: "TikTok" },
+  { icon: DeviceMobile, label: "Android" },
   { icon: Monitor, label: "Windows" },
   { icon: Shield, label: "GoLogin" },
 ];
@@ -485,10 +483,10 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
               aria-label="Open navigation"
               onClick={() => setSidebarOpen(true)}
             >
-              <Menu className="size-5" />
+              <List className="size-5" />
             </Button>
           <Link href="/" className="flex min-w-0 items-center gap-2.5">
-            <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
+            <BrandLogo size={36} trigger="hover" />
             <div>
               <span className="font-heading text-base font-semibold tracking-tight text-white">
                 IP Nova
@@ -513,7 +511,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 shellGlass
               )}
             >
-              <Wallet className="size-3.5 text-emerald-400" />
+              <LordIcon name="wallet" size={22} trigger="hover" />
               <span className="text-sm font-medium text-emerald-300">
                 {formatCurrency(balance)}
               </span>
@@ -581,9 +579,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   )}
                 >
-                  <LayoutDashboard
+                  <SquaresFour
                     className={cn(
-                      "size-4 shrink-0",
+                      "size-5 shrink-0",
                       view === "overview" ? "text-emerald-400" : "text-zinc-500"
                     )}
                   />
@@ -599,9 +597,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   )}
                 >
-                  <Server
+                  <HardDrives
                     className={cn(
-                      "size-4 shrink-0",
+                      "size-5 shrink-0",
                       view === "proxies" ? "text-emerald-400" : "text-zinc-500"
                     )}
                   />
@@ -627,7 +625,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     >
                       <Icon
                         className={cn(
-                          "size-4 shrink-0",
+                          "size-5 shrink-0",
                           buying ? "text-emerald-400" : "text-zinc-500"
                         )}
                       />
@@ -655,7 +653,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 >
                   <UserCircle
                     className={cn(
-                      "size-4 shrink-0",
+                      "size-5 shrink-0",
                       view === "account" ? "text-emerald-400" : "text-zinc-500"
                     )}
                   />
@@ -671,9 +669,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   )}
                 >
-                  <ClipboardList
+                  <ClipboardText
                     className={cn(
-                      "size-4 shrink-0",
+                      "size-5 shrink-0",
                       view === "orders" ? "text-emerald-400" : "text-zinc-500"
                     )}
                   />
@@ -694,11 +692,11 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   )}
                 >
-                  <Wallet
-                    className={cn(
-                      "size-4 shrink-0",
-                      view === "funds" ? "text-emerald-400" : "text-zinc-500"
-                    )}
+                  <LordIcon
+                    name="wallet"
+                    size={24}
+                    trigger="hover"
+                    className={view === "funds" ? "" : "opacity-60"}
                   />
                   Billing & Top-up
                 </button>
@@ -712,9 +710,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
                   )}
                 >
-                  <TrendingUp
+                  <TrendUp
                     className={cn(
-                      "size-4 shrink-0",
+                      "size-5 shrink-0",
                       view === "affiliate" ? "text-emerald-400" : "text-zinc-500"
                     )}
                   />
@@ -733,7 +731,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   onClick={() => setSidebarOpen(false)}
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/[0.03] hover:text-zinc-200"
                 >
-                  <BookOpen className="size-4 shrink-0 text-zinc-500" />
+                  <BookOpen className="size-5 shrink-0 text-zinc-500" />
                   API Docs
                 </Link>
                 <Link
@@ -741,7 +739,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   onClick={() => setSidebarOpen(false)}
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/[0.03] hover:text-zinc-200"
                 >
-                  <BookMarked className="size-4 shrink-0 text-zinc-500" />
+                  <Bookmark className="size-5 shrink-0 text-zinc-500" />
                   Setup Guides
                 </Link>
               </div>
@@ -755,7 +753,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 onClick={() => setSidebarOpen(false)}
                 className="flex items-center justify-center gap-2 rounded-lg py-2 text-[11px] text-zinc-600 transition-colors hover:text-zinc-400 lg:justify-start lg:px-2"
               >
-                <Lock className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                <Lock className="size-4.5 shrink-0 opacity-70" aria-hidden />
                 <span className="font-medium tracking-wide">Admin panel</span>
               </Link>
             </div>
@@ -779,7 +777,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 shellGlass
               )}
             >
-              <Wallet className="size-4 text-emerald-400" />
+              <LordIcon name="wallet" size={24} trigger="hover" />
               <span className="font-medium">{formatCurrency(balance)}</span>
             </div>
           </div>
@@ -1057,9 +1055,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                             disabled={activeProxies === 0}
                           >
                             {copiedButtonId === "proxy-all" ? (
-                              <Check className="size-3.5 text-emerald-400" />
+                              <Check className="size-4.5 text-emerald-400" />
                             ) : (
-                              <Copy className="size-3.5" />
+                              <Copy className="size-4.5" />
                             )}
                             {copiedButtonId === "proxy-all" ? "Copied!" : "Copy all"}
                           </Button>
@@ -1071,7 +1069,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                             onClick={handleExportTxt}
                             disabled={activeProxies === 0}
                           >
-                            <Download className="size-3.5" />
+                            <DownloadSimple className="size-4.5" />
                             Download .txt
                           </Button>
                         </motion.div>
@@ -1091,7 +1089,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                               size="sm"
                               onClick={() => goView("funds")}
                             >
-                              <Wallet className="size-3.5" />
+                              <LordIcon name="wallet" size={22} trigger="hover" />
                               Add funds &amp; order
                             </Button>
                           </div>
@@ -1162,9 +1160,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                                           }
                                         >
                                           {copiedButtonId === `proxy-${proxy.id}` ? (
-                                            <Check className="size-3.5 text-emerald-400" />
+                                            <Check className="size-4.5 text-emerald-400" />
                                           ) : (
-                                            <Copy className="size-3.5" />
+                                            <Copy className="size-4.5" />
                                           )}
                                         </TooltipTrigger>
                                         <TooltipContent>
@@ -1202,7 +1200,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   >
                     <CardHeader>
                       <CardTitle className="font-heading flex items-center gap-2 text-xl">
-                        <Zap className="size-6 text-emerald-400" />
+                        <Lightning className="size-6 text-emerald-400" />
                         Add funds
                       </CardTitle>
                       <CardDescription className="text-zinc-500">
@@ -1235,12 +1233,12 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                           >
                             {cryptoPayLoading ? (
                               <>
-                                <Loader2 className="size-5 animate-spin" />
+                                <IconSpinner className="size-5" />
                                 Opening checkout…
                               </>
                             ) : (
                               <>
-                                <Zap className="size-5" />
+                                <Lightning className="size-5" />
                                 Pay with crypto
                               </>
                             )}
@@ -1378,9 +1376,9 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                           }
                         >
                           {copiedButtonId === "referral-link" ? (
-                            <Check className="size-4" />
+                            <Check className="size-5" />
                           ) : (
-                            <Copy className="size-4" />
+                            <Copy className="size-5" />
                           )}
                           {copiedButtonId === "referral-link"
                             ? "Copied!"
@@ -1417,7 +1415,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   <Card className={cn(shellGlass)}>
                     <CardHeader>
                       <CardTitle className="font-heading flex items-center gap-2 text-lg">
-                        <Braces className="size-5 text-cyan-400" />
+                        <BracketsCurly className="size-5 text-cyan-400" />
                         API credentials
                       </CardTitle>
                       <CardDescription className="text-zinc-500">

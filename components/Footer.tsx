@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Network, Send, Share2 } from "lucide-react";
+import { EnvelopeSimple, PaperPlaneTilt, ShareNetwork } from "@phosphor-icons/react";
+
+import { BrandLogo } from "@/components/icons";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -187,10 +189,7 @@ export function Footer() {
               href="/"
               className="inline-flex items-center gap-2 font-heading text-base font-semibold tracking-tight text-white"
             >
-              <Network
-                className="inline h-8 w-8 shrink-0 text-emerald-400"
-                aria-hidden
-              />
+              <BrandLogo size={40} trigger="hover" />
               IP Nova
             </Link>
 
@@ -204,7 +203,7 @@ export function Footer() {
                   className="transition-colors hover:text-zinc-200"
                   aria-label="IP Nova blog"
                 >
-                  <Share2 className="size-5" />
+                  <ShareNetwork className="size-6" weight="duotone" />
                 </a>
                 <a
                   href={programmaticPath({
@@ -214,14 +213,14 @@ export function Footer() {
                   className="transition-colors hover:text-zinc-200"
                   aria-label="Contact IP Nova"
                 >
-                  <Send className="size-5" />
+                  <PaperPlaneTilt className="size-6" weight="duotone" />
                 </a>
                 <a
                   href="mailto:support@ipnova.online"
                   className="transition-colors hover:text-zinc-200"
                   aria-label="Email IP Nova"
                 >
-                  <Mail className="size-5" />
+                  <EnvelopeSimple className="size-6" weight="duotone" />
                 </a>
               </div>
               <p className="text-xs tracking-wide text-zinc-500">

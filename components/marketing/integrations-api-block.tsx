@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  Boxes,
+  BracketsCurly,
   Cpu,
-  FileCode2,
-  MousePointerClick,
-  Terminal,
-  TestTube2,
-} from "lucide-react";
+  CursorClick,
+  Package,
+  TerminalWindow,
+  TestTube,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
@@ -23,14 +24,14 @@ const CURL_SNIPPET = `curl -sS https://api.ipnova.online/v1/proxies \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Accept: application/json"`;
 
-const pills = [
-  { label: "Python", icon: FileCode2 },
-  { label: "Node.js", icon: Boxes },
-  { label: "Puppeteer", icon: MousePointerClick },
-  { label: "Selenium", icon: TestTube2 },
-  { label: "cURL", icon: Terminal },
+const pills: { label: string; icon: Icon }[] = [
+  { label: "Python", icon: BracketsCurly },
+  { label: "Node.js", icon: Package },
+  { label: "Puppeteer", icon: CursorClick },
+  { label: "Selenium", icon: TestTube },
+  { label: "cURL", icon: TerminalWindow },
   { label: "Go", icon: Cpu },
-] as const;
+];
 
 export function IntegrationsApiBlock() {
   const [copied, setCopied] = useState(false);
@@ -75,12 +76,12 @@ export function IntegrationsApiBlock() {
             Drop-in examples for the stacks teams already run in production.
           </p>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {pills.map(({ label, icon: Icon }) => (
+            {pills.map(({ label, icon: PillIcon }) => (
               <div
                 key={label}
                 className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-black/40 px-3 py-2.5 transition-colors hover:border-emerald-500/25 hover:bg-emerald-500/[0.04]"
               >
-                <Icon className="size-4 shrink-0 text-emerald-400/90" aria-hidden />
+                <PillIcon className="size-5 shrink-0 text-emerald-400/90" weight="duotone" aria-hidden />
                 <span className="text-xs font-medium text-zinc-200">{label}</span>
               </div>
             ))}

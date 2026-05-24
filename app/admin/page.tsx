@@ -1,7 +1,7 @@
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { redirect } from "next/navigation";
-import { Network } from "lucide-react";
+import { BrandLogo } from "@/components/icons";
 
 import { AdminLoading } from "@/components/admin/admin-loading";
 import { Button } from "@/components/ui/button";
@@ -99,7 +99,7 @@ export default async function AdminPage() {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
+            <BrandLogo size={36} trigger="hover" />
             <span className="font-heading text-base font-semibold tracking-tight text-white">
               IP Nova
             </span>

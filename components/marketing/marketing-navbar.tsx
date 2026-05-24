@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Network } from "lucide-react";
 
+import { BrandLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +22,7 @@ export function MarketingNavbar() {
     <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-6 lg:h-[4.25rem]">
         <Link href="/" className="group flex shrink-0 items-center gap-3">
-          <Network
-            className="h-8 w-8 shrink-0 text-emerald-400 transition-transform group-hover:scale-[1.02]"
-            aria-hidden
-          />
+          <BrandLogo size={44} trigger="hover" className="transition-transform group-hover:scale-105" />
           <span className="font-heading text-2xl font-bold tracking-tight text-white">
             IP Nova
           </span>

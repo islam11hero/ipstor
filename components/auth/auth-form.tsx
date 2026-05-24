@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, Network } from "lucide-react";
+import { BrandLogo, IconSpinner } from "@/components/icons";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
         href="/"
         className="mb-8 flex items-center gap-2.5 transition-opacity hover:opacity-80"
       >
-        <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
+        <BrandLogo size={38} trigger="loop" />
         <span className="font-heading text-lg font-semibold tracking-tight text-white">
           IP Nova
         </span>
@@ -147,7 +147,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
                 >
                   {isLoggingIn ? (
                     <>
-                      <Loader2 className="animate-spin" />
+                      <IconSpinner className="size-5" />
                       Signing in…
                     </>
                   ) : (
@@ -191,7 +191,7 @@ export function AuthForm({ defaultTab = "login" }: AuthFormProps) {
                 >
                   {isRegistering ? (
                     <>
-                      <Loader2 className="animate-spin" />
+                      <IconSpinner className="size-5" />
                       Creating account…
                     </>
                   ) : (

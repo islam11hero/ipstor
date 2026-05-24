@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: [
-      "lucide-react",
+      "@phosphor-icons/react",
       "framer-motion",
       "gsap",
       "lottie-react",

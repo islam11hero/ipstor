@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import type { LucideIcon } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { Fingerprint, Gauge, Globe2, Sparkles } from "lucide-react";
+import { Fingerprint, Gauge, GlobeHemisphereWest, Sparkle } from "@phosphor-icons/react/ssr";
 
 import { staticPageMetadata } from "@/lib/page-metadata";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ type ToolCard = {
   title: string;
   description: string;
   href: string;
-  icon: LucideIcon;
+  icon: Icon;
   accent: string;
 };
 
@@ -30,7 +30,7 @@ const tools: ToolCard[] = [
     description:
       "Resolve your public IP, ASN, ISP, and geo in one glance — ideal for leak checks and onboarding.",
     href: "/tools/ip-lookup",
-    icon: Globe2,
+    icon: GlobeHemisphereWest,
     accent: "text-emerald-400",
   },
   {
@@ -59,7 +59,7 @@ export default function ToolsHubPage() {
         aria-hidden
       />
       <div className="flex flex-wrap items-center gap-2 text-xs font-medium tracking-[0.2em] text-emerald-500/90 uppercase">
-        <Sparkles className="size-3.5" aria-hidden />
+        <Sparkle className="size-4.5" weight="duotone" aria-hidden />
         Engineering as marketing
       </div>
       <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
@@ -85,7 +85,7 @@ export default function ToolsHubPage() {
                   t.accent
                 )}
               >
-                <Icon className="size-6" aria-hidden />
+                <Icon className="size-7" weight="duotone" aria-hidden />
               </div>
               <h2 className="mt-6 font-heading text-xl font-semibold text-white group-hover:text-emerald-100">
                 {t.title}

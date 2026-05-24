@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Globe2, Loader2 } from "lucide-react";
+import { GlobeHemisphereWest, Warning } from "@phosphor-icons/react";
+
+import { IconSpinner } from "@/components/icons";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -58,7 +60,7 @@ export function IpLookupClient() {
         aria-hidden
       />
       <div className="flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-emerald-500/90 uppercase">
-        <Globe2 className="size-3.5" aria-hidden />
+        <GlobeHemisphereWest className="size-4.5" weight="duotone" aria-hidden />
         Utility
       </div>
       <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -71,7 +73,7 @@ export function IpLookupClient() {
 
       {loading && (
         <div className="mt-12 flex items-center gap-3 text-zinc-400">
-          <Loader2 className="size-5 animate-spin text-emerald-400" />
+          <IconSpinner className="size-5 text-emerald-400" />
           Resolving your connection…
         </div>
       )}
@@ -92,7 +94,7 @@ export function IpLookupClient() {
               </span>
               <div>
                 <p className="flex items-center gap-2 text-sm font-semibold text-amber-100">
-                  <AlertTriangle className="size-4 shrink-0 text-amber-400" aria-hidden />
+                  <Warning className="size-5 shrink-0 text-amber-400" weight="duotone" aria-hidden />
                   Your real IP is exposed
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-amber-200/80 sm:text-sm">

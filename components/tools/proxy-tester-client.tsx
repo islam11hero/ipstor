@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, ListChecks, XCircle } from "lucide-react";
+import { CheckCircle, ListChecks, XCircle } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,7 +47,7 @@ export function ProxyTesterClient() {
         aria-hidden
       />
       <div className="flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-cyan-500/90 uppercase">
-        <ListChecks className="size-3.5" aria-hidden />
+        <ListChecks className="size-4.5" aria-hidden />
         Utility
       </div>
       <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -130,7 +130,7 @@ export function ProxyTesterClient() {
                     >
                       <TableCell className="text-center align-middle">
                         {r.valid ? (
-                          <CheckCircle2
+                          <CheckCircle
                             className="mx-auto size-4 text-emerald-400"
                             aria-label="Valid"
                           />

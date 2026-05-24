@@ -6,14 +6,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Suspense, useCallback, useMemo, useState, useTransition } from "react";
 import {
   ArrowLeft,
-  Banknote,
-  ClipboardList,
-  LayoutDashboard,
-  Loader2,
-  MoreHorizontal,
-  Shield,
-  Users,
-} from "lucide-react";
+  Bank,
+  ClipboardText,
+  DotsThreeOutline,
+  SquaresFour,
+  UsersThree,
+} from "@phosphor-icons/react";
+
+import { IconSpinner, LordIcon } from "@/components/icons";
 import { toast } from "sonner";
 
 import { approveDeposit, fulfillOrder as fulfillOrderAction } from "@/app/admin/actions";
@@ -339,8 +339,8 @@ function AdminPanelInner({
     <>
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 ring-1 ring-cyan-500/20">
-            <Shield className="size-5 text-cyan-400" />
+          <div className="flex size-14 items-center justify-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 ring-1 ring-cyan-500/20">
+            <LordIcon name="shield" size={30} trigger="hover" />
           </div>
           <div>
             <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
@@ -379,16 +379,16 @@ function AdminPanelInner({
               >
                 <span className="flex items-center gap-2">
                   {item.id === "dashboard" && (
-                    <LayoutDashboard className="size-4 shrink-0 text-emerald-400/90" />
+                    <SquaresFour className="size-5 shrink-0 text-emerald-400/90" />
                   )}
                   {item.id === "orders" && (
-                    <ClipboardList className="size-4 shrink-0 text-cyan-400/90" />
+                    <ClipboardText className="size-5 shrink-0 text-cyan-400/90" />
                   )}
                   {item.id === "deposits" && (
-                    <Banknote className="size-4 shrink-0 text-amber-300/90" />
+                    <Bank className="size-5 shrink-0 text-amber-300/90" />
                   )}
                   {item.id === "accounts" && (
-                    <Users className="size-4 shrink-0 text-violet-300/90" />
+                    <UsersThree className="size-5 shrink-0 text-violet-300/90" />
                   )}
                   {item.label}
                 </span>
@@ -460,7 +460,7 @@ function AdminPanelInner({
                           className="border-white/12 bg-black/30"
                           onClick={() => navigateView("accounts")}
                         >
-                          <Users className="size-4" />
+                          <UsersThree className="size-5" />
                           Registered accounts ({accounts.length})
                         </Button>
                         <Button
@@ -469,7 +469,7 @@ function AdminPanelInner({
                           className="border-white/12 bg-black/30"
                           onClick={() => navigateView("orders")}
                         >
-                          <ClipboardList className="size-4" />
+                          <ClipboardText className="size-5" />
                           Pending orders ({orders.length})
                         </Button>
                         <Button
@@ -478,7 +478,7 @@ function AdminPanelInner({
                           className="border-white/12 bg-black/30"
                           onClick={() => navigateView("deposits")}
                         >
-                          <Banknote className="size-4" />
+                          <Bank className="size-5" />
                           Pending deposits ({deposits.length})
                         </Button>
                       </div>
@@ -549,7 +549,7 @@ function AdminPanelInner({
                       className="border-white/12 bg-black/30"
                       onClick={clearSelectedAccount}
                     >
-                      <ArrowLeft className="size-4" />
+                      <ArrowLeft className="size-5" />
                       Back to accounts
                     </Button>
                     {selectedAccount.pending_order_count > 0 ? (
@@ -560,7 +560,7 @@ function AdminPanelInner({
                         className="border-amber-500/30 text-amber-200"
                         onClick={() => navigateView("orders")}
                       >
-                        <ClipboardList className="size-4" />
+                        <ClipboardText className="size-5" />
                         {selectedAccount.pending_order_count} pending order
                         {selectedAccount.pending_order_count === 1 ? "" : "s"}
                       </Button>
@@ -692,7 +692,7 @@ function AdminPanelInner({
                                       className="border-white/12 bg-black/30"
                                       onClick={(event) => event.stopPropagation()}
                                     >
-                                      <MoreHorizontal className="size-4" />
+                                      <DotsThreeOutline className="size-5" />
                                       <span className="sr-only">Account actions</span>
                                     </Button>
                                   }
@@ -796,7 +796,7 @@ function AdminPanelInner({
                                       className="border-white/12 bg-black/30"
                                       disabled={isPending}
                                     >
-                                      <MoreHorizontal className="size-4" />
+                                      <DotsThreeOutline className="size-5" />
                                       <span className="sr-only">Quick actions</span>
                                     </Button>
                                   }
@@ -897,7 +897,7 @@ function AdminPanelInner({
                                       className="border-white/12 bg-black/30"
                                       disabled={isPending}
                                     >
-                                      <MoreHorizontal className="size-4" />
+                                      <DotsThreeOutline className="size-5" />
                                       <span className="sr-only">Quick actions</span>
                                     </Button>
                                   }
@@ -1002,7 +1002,7 @@ function AdminPanelInner({
               >
                 {isPending ? (
                   <>
-                    <Loader2 className="animate-spin" />
+                    <IconSpinner className="size-5" />
                     Saving…
                   </>
                 ) : (

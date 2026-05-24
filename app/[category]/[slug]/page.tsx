@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Icon } from "@phosphor-icons/react";
 import {
-  Activity,
   ArrowRight,
-  Layers,
-  Network,
+  Fingerprint,
+  Gauge,
+  GlobeHemisphereWest,
+  Lightning,
+  Pulse,
+  ShareNetwork,
   Shield,
-  Zap,
-} from "lucide-react";
+  Sparkle,
+  Stack,
+} from "@phosphor-icons/react/ssr";
 
 import { FaqDetailsSection } from "@/components/seo/faq-details-section";
+import { BrandLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,7 +34,7 @@ import { cn } from "@/lib/utils";
 const shell =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
 
-const FEATURE_ICONS = [Activity, Shield, Zap, Layers, Network] as const;
+const FEATURE_ICONS: Icon[] = [Pulse, Shield, Lightning, Stack, ShareNetwork];
 
 type PageProps = {
   params: Promise<{ category: string; slug: string }>;
@@ -97,7 +103,7 @@ export default async function SeoLandingPage({ params }: PageProps) {
   const related = data.relatedLinks ?? [];
 
   const bento = data.features.map((f, i) => {
-    const Icon = FEATURE_ICONS[i % FEATURE_ICONS.length] ?? Activity;
+    const Icon = FEATURE_ICONS[i % FEATURE_ICONS.length] ?? Pulse;
     return { ...f, Icon };
   });
 
@@ -120,7 +126,7 @@ export default async function SeoLandingPage({ params }: PageProps) {
           render={<Link href="/dashboard" />}
         >
           Get started
-          <ArrowRight className="size-4" />
+          <ArrowRight className="size-5" />
         </Button>
         <Button
           size="lg"
@@ -179,7 +185,7 @@ export default async function SeoLandingPage({ params }: PageProps) {
             >
               <CardHeader className="pb-2">
                 <div className="flex size-10 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10">
-                  <Icon className="size-5 text-emerald-400" aria-hidden />
+                  <Icon className="size-6 text-emerald-400" weight="duotone" aria-hidden />
                 </div>
                 <CardTitle className="font-heading pt-3 text-base leading-snug">
                   {item.title}
@@ -211,7 +217,7 @@ export default async function SeoLandingPage({ params }: PageProps) {
             render={<Link href="/dashboard" />}
           >
             Open dashboard
-            <ArrowRight className="size-4" />
+            <ArrowRight className="size-5" />
           </Button>
         </CardContent>
       </Card>
@@ -255,7 +261,7 @@ export default async function SeoLandingPage({ params }: PageProps) {
       <header className="border-b border-white/[0.06] bg-[#050505]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <Network className="h-6 w-6 shrink-0 text-emerald-400" aria-hidden />
+            <BrandLogo size={36} trigger="hover" />
             <span className="font-heading text-base font-semibold tracking-tight text-white">
               IP Nova
             </span>

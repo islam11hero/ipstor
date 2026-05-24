@@ -4,19 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Activity,
   ArrowRight,
   ArrowUpRight,
-  Building2,
+  Buildings,
   Check,
-  Layers,
-  Network,
-  Server,
-  Shield,
-  Smartphone,
-  Wifi,
-  Zap,
-} from "lucide-react";
+  DeviceMobile,
+  GlobeHemisphereWest,
+  HardDrives,
+  Lightning,
+  Pulse,
+  ShareNetwork,
+  ShieldCheck,
+  Stack,
+  WifiHigh,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+
+import { MotionPhosphor } from "@/components/icons";
 
 import { HeroNetworkVisual } from "@/components/marketing/hero-network-visual";
 import { IntegrationsApiBlock } from "@/components/marketing/integrations-api-block";
@@ -36,13 +40,20 @@ const surface = "surface-bento";
 const glassProduct =
   "group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.05] bg-white/[0.02] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl transition-colors hover:border-emerald-500/20 hover:bg-white/[0.035] sm:p-7";
 
-const solutionProducts = [
+const solutionProducts: {
+  title: string;
+  stat: string;
+  price: string;
+  href: string;
+  icon: Icon;
+  description: string;
+}[] = [
   {
     title: "Residential",
     stat: "32M+ IPs",
     price: "from $1.76/GB",
     href: "/products/residential-proxies",
-    icon: Wifi,
+    icon: WifiHigh,
     description:
       "Legitimate residential egress for rank tracking, ad verification, and high-trust scraping.",
   },
@@ -51,7 +62,7 @@ const solutionProducts = [
     stat: "Dedicated ASN",
     price: "from $2.40/IP",
     href: "/products/isp-proxies",
-    icon: Building2,
+    icon: Buildings,
     description:
       "Static sessions that behave like home users—ideal for accounts, carts, and long-lived flows.",
   },
@@ -60,7 +71,7 @@ const solutionProducts = [
     stat: "50+ regions",
     price: "from $1.50/IP",
     href: "/products/datacenter-proxies",
-    icon: Server,
+    icon: HardDrives,
     description:
       "Throughput-first endpoints for bulk crawls, price intelligence, and internal tooling.",
   },
@@ -69,11 +80,11 @@ const solutionProducts = [
     stat: "4G / 5G",
     price: "from $3.20/GB",
     href: "/products/mobile-proxies",
-    icon: Smartphone,
+    icon: DeviceMobile,
     description:
       "Carrier-grade mobile IPs when app integrity, device graphs, and geo fidelity matter most.",
   },
-] as const;
+];
 
 const reviews = [
   {
@@ -151,7 +162,7 @@ export function MarketingHome() {
                   render={<Link href="/login?tab=register" />}
                 >
                   Start onboarding
-                  <ArrowRight className="size-4 opacity-70" />
+                  <ArrowRight className="size-5 opacity-70" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -159,7 +170,7 @@ export function MarketingHome() {
                   render={<Link href="#use-cases" />}
                 >
                   Platform overview
-                  <ArrowUpRight className="size-4 opacity-60" />
+                  <ArrowUpRight className="size-5 opacity-60" />
                 </Button>
               </div>
             </motion.div>
@@ -219,8 +230,13 @@ export function MarketingHome() {
                         <p className="text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
                           {p.stat}
                         </p>
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition-colors group-hover:border-emerald-500/30 group-hover:bg-emerald-500/10">
-                          <Icon className="size-5 text-emerald-400/90" aria-hidden />
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition-colors group-hover:border-emerald-500/30 group-hover:bg-emerald-500/10">
+                          <MotionPhosphor
+                          icon={Icon}
+                          size={26}
+                          className="text-emerald-400/90"
+                          aria-hidden
+                        />
                         </div>
                       </div>
                       <h3 className="mt-4 font-heading text-xl font-semibold text-white">
@@ -231,7 +247,7 @@ export function MarketingHome() {
                       </p>
                       <span className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400/90 transition-colors group-hover:text-emerald-300">
                         Explore
-                        <ArrowUpRight className="size-3.5" />
+                        <ArrowUpRight className="size-4.5" />
                       </span>
                     </Link>
                   </MagicCard>
@@ -264,7 +280,7 @@ export function MarketingHome() {
               )}
             >
               <div className="flex size-11 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03]">
-                <Network className="size-5 text-emerald-400/90" />
+                <ShareNetwork className="size-6 text-emerald-400/90" weight="duotone" />
               </div>
               <div>
                 <h3 className="font-heading text-lg font-medium text-white">
@@ -279,7 +295,7 @@ export function MarketingHome() {
 
             <div className={cn(surface, "col-span-6 p-6 lg:col-span-4 lg:p-7")}>
               <div className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
-                <Shield className="size-[18px] text-cyan-400/90" />
+                <ShieldCheck className="size-[22px] text-cyan-400/90" weight="duotone" />
               </div>
               <h3 className="mt-5 font-heading text-base font-medium text-white">
                 Identity-aware sessions
@@ -292,7 +308,7 @@ export function MarketingHome() {
 
             <div className={cn(surface, "col-span-6 p-6 lg:col-span-3 lg:p-7")}>
               <div className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
-                <Zap className="size-[18px] text-amber-200/80" />
+                <Lightning className="size-[22px] text-amber-200/80" weight="duotone" />
               </div>
               <h3 className="mt-5 font-heading text-base font-medium text-white">
                 Instant issuance
@@ -304,7 +320,7 @@ export function MarketingHome() {
 
             <div className={cn(surface, "col-span-6 p-6 lg:col-span-4 lg:p-7")}>
               <div className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
-                <Activity className="size-[18px] text-emerald-400/90" />
+                <Pulse className="size-[22px] text-emerald-400/90" weight="duotone" />
               </div>
               <h3 className="mt-5 font-heading text-base font-medium text-white">
                 Observable uptime
@@ -322,7 +338,7 @@ export function MarketingHome() {
             >
               <div className="flex-1">
                 <div className="flex size-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03]">
-                  <Layers className="size-[18px] text-zinc-300" />
+                  <Stack className="size-[22px] text-zinc-300" weight="duotone" />
                 </div>
                 <h3 className="mt-5 font-heading text-base font-medium text-white lg:mt-6">
                   Single invoice, multiple workloads
@@ -356,7 +372,7 @@ export function MarketingHome() {
                 className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400/90 hover:text-emerald-300"
               >
                 Request enterprise quote
-                <ArrowUpRight className="size-4" />
+                <ArrowUpRight className="size-5" />
               </Link>
             </div>
 
@@ -380,7 +396,7 @@ export function MarketingHome() {
                       "50+ global locations",
                     ].map((item) => (
                       <li key={item} className="flex gap-3">
-                        <Check className="mt-0.5 size-4 shrink-0 text-emerald-500/80" />
+                        <Check className="mt-0.5 size-5 shrink-0 text-emerald-500/80" weight="bold" />
                         {item}
                       </li>
                     ))}
@@ -414,7 +430,7 @@ export function MarketingHome() {
                       "Pay-as-you-grow metering",
                     ].map((item) => (
                       <li key={item} className="flex gap-3">
-                        <Check className="mt-0.5 size-4 shrink-0 text-cyan-400/80" />
+                        <Check className="mt-0.5 size-5 shrink-0 text-cyan-400/80" weight="bold" />
                         {item}
                       </li>
                     ))}
