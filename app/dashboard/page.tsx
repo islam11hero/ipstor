@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import nextDynamic from "next/dynamic";
+
+import { DashboardLoading } from "@/components/dashboard/dashboard-loading";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { FlashToast } from "@/components/dashboard/flash-toast";
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
@@ -11,6 +13,14 @@ import { loadDashboardData } from "@/lib/dashboard/load-dashboard-data";
 import { isAdminEmail } from "@/lib/admin";
 import type { DashboardData } from "@/lib/types/dashboard";
 import { createClient } from "@/utils/supabase/server";
+
+const DashboardClient = nextDynamic(
+  () =>
+    import("@/components/dashboard/dashboard-client").then(
+      (mod) => mod.DashboardClient
+    ),
+  { loading: () => <DashboardLoading /> }
+);
 
 /** Data is fetched here (SSR); interactive UI including Add Funds → `/api/payment` is in `DashboardClient`. */
 
@@ -79,6 +89,8 @@ export default async function DashboardPage() {
   const data: DashboardData = {
     email: user.email ?? "",
     balance: loaded.balance,
+    memberSince: loaded.memberSince,
+    accountStats: loaded.accountStats,
     proxies: loaded.proxies,
     deposits: loaded.deposits,
     orders: loaded.orders,

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { UserDeposit, UserOrder, UserProxy } from "@/lib/types/dashboard";
+import { computeAccountStats } from "@/lib/dashboard/account-stats";
 import { createServiceClient } from "@/utils/supabase/service";
 
 export type DashboardLoadIssue = {
@@ -11,9 +12,11 @@ export type DashboardLoadIssue = {
 
 export type DashboardLoadResult = {
   balance: number;
+  memberSince: string | null;
   proxies: UserProxy[];
   deposits: UserDeposit[];
   orders: UserOrder[];
+  accountStats: ReturnType<typeof computeAccountStats>;
   issues: DashboardLoadIssue[];
 };
 
@@ -48,26 +51,37 @@ function mapProxyRow(row: Record<string, unknown>): UserProxy {
     username,
     password,
     created_at: String(row.created_at ?? new Date().toISOString()),
+    order_id:
+      typeof row.order_id === "string"
+        ? row.order_id
+        : row.order_id === null
+          ? null
+          : undefined,
   };
 }
 
 export async function ensureUserProfile(
   supabase: SupabaseClient,
   user: { id: string; email?: string | null }
-): Promise<{ balance: number; error: string | null }> {
+): Promise<{ balance: number; memberSince: string | null; error: string | null }> {
   const existing = await supabase
     .from("profiles")
-    .select("balance")
+    .select("balance, created_at")
     .eq("id", user.id)
     .maybeSingle();
 
   if (existing.data) {
-    return { balance: Number(existing.data.balance ?? 0), error: null };
+    return {
+      balance: Number(existing.data.balance ?? 0),
+      memberSince: existing.data.created_at ?? null,
+      error: null,
+    };
   }
 
   if (existing.error && isMissingRelation(existing.error.message, "profiles")) {
     return {
       balance: 0,
+      memberSince: null,
       error:
         "Database table public.profiles is missing. Run supabase/setup_all.sql in the Supabase SQL Editor.",
     };
@@ -87,11 +101,15 @@ export async function ensureUserProfile(
     if (!upsertErr) {
       const retry = await supabase
         .from("profiles")
-        .select("balance")
+        .select("balance, created_at")
         .eq("id", user.id)
         .maybeSingle();
       if (retry.data) {
-        return { balance: Number(retry.data.balance ?? 0), error: null };
+        return {
+          balance: Number(retry.data.balance ?? 0),
+          memberSince: retry.data.created_at ?? null,
+          error: null,
+        };
       }
     }
   }
@@ -103,11 +121,15 @@ export async function ensureUserProfile(
       email: user.email ?? null,
       balance: 0,
     })
-    .select("balance")
+    .select("balance, created_at")
     .maybeSingle();
 
   if (inserted.data) {
-    return { balance: Number(inserted.data.balance ?? 0), error: null };
+    return {
+      balance: Number(inserted.data.balance ?? 0),
+      memberSince: inserted.data.created_at ?? null,
+      error: null,
+    };
   }
 
   const message =
@@ -115,7 +137,7 @@ export async function ensureUserProfile(
     existing.error?.message ??
     "Could not create your profile row.";
 
-  return { balance: 0, error: message };
+  return { balance: 0, memberSince: null, error: message };
 }
 
 async function fetchUserProxies(
@@ -124,7 +146,7 @@ async function fetchUserProxies(
 ): Promise<{ proxies: UserProxy[]; error: string | null }> {
   const modern = await supabase
     .from("user_proxies")
-    .select("id, ip_address, port, username, password, created_at")
+    .select("id, ip_address, port, username, password, created_at, order_id")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -266,7 +288,13 @@ export async function loadDashboardData(
 ): Promise<DashboardLoadResult> {
   const issues: DashboardLoadIssue[] = [];
 
-  const profile = await ensureUserProfile(supabase, user);
+  const [profile, proxiesResult, depositsResult, ordersResult] = await Promise.all([
+    ensureUserProfile(supabase, user),
+    fetchUserProxies(supabase, user.id),
+    fetchUserDeposits(supabase, user.id),
+    fetchUserOrders(supabase, user.id),
+  ]);
+
   if (profile.error) {
     issues.push({
       label: "Account balance",
@@ -274,12 +302,6 @@ export async function loadDashboardData(
       fatal: true,
     });
   }
-
-  const [proxiesResult, depositsResult, ordersResult] = await Promise.all([
-    fetchUserProxies(supabase, user.id),
-    fetchUserDeposits(supabase, user.id),
-    fetchUserOrders(supabase, user.id),
-  ]);
 
   if (proxiesResult.error) {
     issues.push({
@@ -323,9 +345,17 @@ export async function loadDashboardData(
 
   return {
     balance: profile.balance,
+    memberSince: profile.memberSince,
     proxies: proxiesResult.proxies,
     deposits: depositsResult.deposits,
     orders: ordersResult.orders,
+    accountStats: computeAccountStats({
+      balance: profile.balance,
+      memberSince: profile.memberSince,
+      proxies: proxiesResult.proxies,
+      deposits: depositsResult.deposits,
+      orders: ordersResult.orders,
+    }),
     issues,
   };
 }

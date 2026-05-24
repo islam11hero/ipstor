@@ -316,21 +316,11 @@ export function getProductPageConfig(productId: ProxyProduct): ProductPageConfig
   return PRODUCT_PAGE_CONFIGS[productId];
 }
 
-export function viewSlugForProduct(productId: ProxyProduct): string {
-  return productId === "static_residential" ? "static-residential" : productId;
-}
-
-export function productFromViewSlug(slug: string): ProxyProduct | null {
-  const normalized = slug.trim().toLowerCase().replace(/-/g, "_");
-  if (isProxyProduct(normalized)) {
-    return normalized;
-  }
-  return null;
-}
-
-export function isProductDashboardView(view: string): view is ProxyProduct {
-  return isProxyProduct(view);
-}
+export {
+  isProductDashboardView,
+  productFromViewSlug,
+  viewSlugForProduct,
+} from "@/lib/product-routing";
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;

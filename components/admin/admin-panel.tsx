@@ -1,9 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Suspense, useCallback, useMemo, useState, useTransition } from "react";
 import {
+  ArrowLeft,
   Banknote,
   ClipboardList,
   LayoutDashboard,
@@ -41,11 +43,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
+import { Badge } from "@/components/ui/badge";
 import { describeOrderExtras } from "@/lib/product-catalog";
+import { tierBadgeClass } from "@/lib/dashboard/account-stats";
 import { hoverLift, tapScale } from "@/lib/motion";
 import type {
   AdminRegisteredAccount,
-  AdminUserOrderSummary,
   PendingDeposit,
   PendingOrder,
 } from "@/lib/types/admin";
@@ -67,9 +70,22 @@ type RecentDepositTableRow = {
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
 
+const AccountOverview = dynamic(
+  () =>
+    import("@/components/dashboard/account-overview").then(
+      (mod) => mod.AccountOverview
+    ),
+  {
+    loading: () => (
+      <div className="h-64 animate-pulse rounded-2xl bg-white/[0.04]" aria-hidden />
+    ),
+  }
+);
+
 type AdminView = "dashboard" | "orders" | "deposits" | "accounts";
 
 const ADMIN_VIEW_PARAM = "view";
+const ADMIN_USER_PARAM = "user";
 
 const ADMIN_VIEW_ALIASES: Record<string, AdminView> = {
   dashboard: "dashboard",
@@ -187,15 +203,61 @@ function AdminPanelInner({
     () => parseAdminViewParam(searchParams.get(ADMIN_VIEW_PARAM)),
     [searchParams]
   );
+  const selectedUserId = searchParams.get(ADMIN_USER_PARAM);
+
+  const selectedAccount = useMemo(
+    () =>
+      selectedUserId
+        ? accounts.find((account) => account.id === selectedUserId) ?? null
+        : null,
+    [accounts, selectedUserId]
+  );
+
+  const platformStats = useMemo(() => {
+    const totalSpent = accounts.reduce(
+      (sum, account) => sum + account.accountStats.totalSpent,
+      0
+    );
+    const totalDeposited = accounts.reduce(
+      (sum, account) => sum + account.accountStats.totalDeposited,
+      0
+    );
+    const activeProxies = accounts.reduce(
+      (sum, account) => sum + account.accountStats.activeProxiesCount,
+      0
+    );
+    const pendingFulfillment = accounts.reduce(
+      (sum, account) => sum + account.pending_order_count,
+      0
+    );
+    return { totalSpent, totalDeposited, activeProxies, pendingFulfillment };
+  }, [accounts]);
 
   const navigateView = useCallback(
     (next: AdminView) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set(ADMIN_VIEW_PARAM, next);
+      params.delete(ADMIN_USER_PARAM);
       router.push(`/admin?${params.toString()}`, { scroll: false });
     },
     [router, searchParams]
   );
+
+  const navigateToAccount = useCallback(
+    (userId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set(ADMIN_VIEW_PARAM, "accounts");
+      params.set(ADMIN_USER_PARAM, userId);
+      router.push(`/admin?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  const clearSelectedAccount = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(ADMIN_USER_PARAM);
+    router.push(`/admin?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
   const [fulfillTargetOrder, setFulfillTargetOrder] = useState<PendingOrder | null>(null);
   const [rawProxyList, setRawProxyList] = useState("");
 
@@ -343,7 +405,7 @@ function AdminPanelInner({
         <div className="min-w-0 flex-1">
           <AnimatePresence mode="wait">
             <motion.div
-              key={view}
+              key={`${view}-${selectedUserId ?? "all"}`}
               initial={viewMotion.initial}
               animate={viewMotion.animate}
               exit={viewMotion.exit}
@@ -358,7 +420,7 @@ function AdminPanelInner({
                 >
                   <motion.div
                     variants={bentoItem}
-                    className="grid gap-4 sm:grid-cols-3"
+                    className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
                   >
                     <MetricTile
                       label="Pending orders"
@@ -374,6 +436,11 @@ function AdminPanelInner({
                       label="Active users"
                       value={String(activeUserCount)}
                       hint="Profiles in database"
+                    />
+                    <MetricTile
+                      label="Platform spend"
+                      value={formatCurrency(platformStats.totalSpent)}
+                      hint={`${platformStats.activeProxies} active proxy lines`}
                     />
                   </motion.div>
 
@@ -472,7 +539,58 @@ function AdminPanelInner({
                 </motion.div>
               )}
 
-              {view === "accounts" && (
+              {view === "accounts" && selectedAccount && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-white/12 bg-black/30"
+                      onClick={clearSelectedAccount}
+                    >
+                      <ArrowLeft className="size-4" />
+                      Back to accounts
+                    </Button>
+                    {selectedAccount.pending_order_count > 0 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-amber-500/30 text-amber-200"
+                        onClick={() => navigateView("orders")}
+                      >
+                        <ClipboardList className="size-4" />
+                        {selectedAccount.pending_order_count} pending order
+                        {selectedAccount.pending_order_count === 1 ? "" : "s"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <AccountOverview
+                    email={selectedAccount.email ?? "No email on file"}
+                    stats={selectedAccount.accountStats}
+                    walletBalance={selectedAccount.balance}
+                    variant="full"
+                  />
+                </div>
+              )}
+
+              {view === "accounts" && !selectedAccount && selectedUserId && (
+                <div className={cn(shellGlass, "p-10 text-center")}>
+                  <p className="text-sm text-zinc-400">Account not found.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 border-white/12"
+                    onClick={clearSelectedAccount}
+                  >
+                    Back to accounts
+                  </Button>
+                </div>
+              )}
+
+              {view === "accounts" && !selectedUserId && (
                 <motion.div
                   className={cn(shellGlass, "overflow-hidden")}
                   initial={viewMotion.initial}
@@ -489,8 +607,8 @@ function AdminPanelInner({
                       Registered accounts
                     </h2>
                     <p className="mt-1 text-xs text-zinc-500">
-                      Customer profiles, purchase history, and pending fulfillment
-                      needs.
+                      Click any account for the full profile — tier, spend, product
+                      mix, and activity timeline.
                     </p>
                   </motion.div>
                   {accounts.length === 0 ? (
@@ -502,10 +620,12 @@ function AdminPanelInner({
                       <TableHeader>
                         <TableRow className="border-white/[0.08] hover:bg-transparent">
                           <TableHead>Account</TableHead>
+                          <TableHead>Tier</TableHead>
                           <TableHead>Balance</TableHead>
+                          <TableHead>Spent</TableHead>
+                          <TableHead>Proxies</TableHead>
                           <TableHead>Joined</TableHead>
-                          <TableHead>Purchases</TableHead>
-                          <TableHead>Pending needs</TableHead>
+                          <TableHead>Pending</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -513,7 +633,8 @@ function AdminPanelInner({
                         {accounts.map((account) => (
                           <TableRow
                             key={account.id}
-                            className="border-white/[0.05] hover:bg-white/[0.02]"
+                            className="cursor-pointer border-white/[0.05] hover:bg-white/[0.03]"
+                            onClick={() => navigateToAccount(account.id)}
                           >
                             <TableCell>
                               <motion.div
@@ -530,14 +651,27 @@ function AdminPanelInner({
                                 </span>
                               </motion.div>
                             </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={cn(
+                                  "border",
+                                  tierBadgeClass(account.accountStats.accountTier)
+                                )}
+                              >
+                                {account.accountStats.tierLabel}
+                              </Badge>
+                            </TableCell>
                             <TableCell className="font-medium text-emerald-200/90">
                               {formatCurrency(account.balance)}
                             </TableCell>
+                            <TableCell className="text-zinc-300">
+                              {formatCurrency(account.accountStats.totalSpent)}
+                            </TableCell>
+                            <TableCell className="text-zinc-300">
+                              {account.accountStats.activeProxiesCount}
+                            </TableCell>
                             <TableCell className="text-zinc-400">
                               {formatDate(account.created_at)}
-                            </TableCell>
-                            <TableCell className="max-w-[280px]">
-                              <PurchasesSummary orders={account.orders} />
                             </TableCell>
                             <TableCell>
                               {account.pending_order_count > 0 ? (
@@ -556,6 +690,7 @@ function AdminPanelInner({
                                       size="sm"
                                       variant="outline"
                                       className="border-white/12 bg-black/30"
+                                      onClick={(event) => event.stopPropagation()}
                                     >
                                       <MoreHorizontal className="size-4" />
                                       <span className="sr-only">Account actions</span>
@@ -566,6 +701,11 @@ function AdminPanelInner({
                                   align="end"
                                   className="min-w-44 border-white/10 bg-zinc-950/95 text-zinc-100"
                                 >
+                                  <DropdownMenuItem
+                                    onClick={() => navigateToAccount(account.id)}
+                                  >
+                                    View full profile
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
                                       void copyText(account.id, "User ID")
@@ -767,6 +907,11 @@ function AdminPanelInner({
                                   className="min-w-44 border-white/10 bg-zinc-950/95 text-zinc-100"
                                 >
                                   <DropdownMenuItem
+                                    onClick={() => navigateToAccount(order.user_id)}
+                                  >
+                                    View customer profile
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
                                     onClick={() => openFulfillDialog(order)}
                                   >
                                     Fulfill order
@@ -883,31 +1028,6 @@ export function AdminPanel(props: AdminPanelProps) {
 function orderQuantityLabel(proxyType: string, quantity: number) {
   const product = getProduct(proxyType);
   return product ? formatProductQuantityLabel(product, quantity) : String(quantity);
-}
-
-function PurchasesSummary({ orders }: { orders: AdminUserOrderSummary[] }) {
-  const completed = orders.filter((order) => order.status === "completed");
-
-  if (completed.length === 0) {
-    return <span className="text-sm text-zinc-500">No purchases yet</span>;
-  }
-
-  const visible = completed.slice(0, 2);
-  const remaining = completed.length - visible.length;
-
-  return (
-    <div className="space-y-1">
-      {visible.map((order) => (
-        <p key={order.id} className="text-sm text-zinc-300">
-          {formatProductTypeLabel(order.proxy_type)} ·{" "}
-          {orderQuantityLabel(order.proxy_type, order.quantity)}
-        </p>
-      ))}
-      {remaining > 0 ? (
-        <p className="text-xs text-zinc-500">+{remaining} more completed</p>
-      ) : null}
-    </div>
-  );
 }
 
 function MetricTile({

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Suspense,
   useCallback,
@@ -38,6 +39,7 @@ import {
   Shield,
   Smartphone,
   TrendingUp,
+  UserCircle,
   Wallet,
   Wifi,
   X,
@@ -45,7 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { ProductPurchasePage } from "@/components/dashboard/product-purchase-page";
+
 import { SearchParamsSuspenseFallback } from "@/components/search-params-suspense-fallback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,9 @@ import {
 } from "@/components/ui/tooltip";
 import { isAdminEmail } from "@/lib/admin";
 import {
+  tierBadgeClass,
+} from "@/lib/dashboard/account-stats";
+import {
   defaultTransition,
   fadeInUp,
   glowTitle,
@@ -81,11 +86,10 @@ import {
   tapScale,
 } from "@/lib/motion";
 import {
-  describeOrderExtras,
   isProductDashboardView,
   productFromViewSlug,
   viewSlugForProduct,
-} from "@/lib/product-catalog";
+} from "@/lib/product-routing";
 import {
   formatProductQuantityLabel,
   formatProductTypeLabel,
@@ -99,12 +103,52 @@ import { SITE_URL } from "@/lib/site-url";
 import type { DashboardData, UserProxy } from "@/lib/types/dashboard";
 import { cn } from "@/lib/utils";
 
+const ProductPurchasePage = dynamic(
+  () =>
+    import("@/components/dashboard/product-purchase-page").then(
+      (mod) => mod.ProductPurchasePage
+    ),
+  {
+    loading: () => (
+      <div className="h-72 animate-pulse rounded-2xl bg-white/[0.04]" aria-hidden />
+    ),
+  }
+);
+
+const OrderExtrasText = dynamic(
+  () =>
+    import("@/components/dashboard/order-extras-text").then(
+      (mod) => mod.OrderExtrasText
+    )
+);
+
+const AccountOverview = dynamic(
+  () =>
+    import("@/components/dashboard/account-overview").then(
+      (mod) => mod.AccountOverview
+    ),
+  {
+    loading: () => (
+      <motion.div className="h-64 animate-pulse rounded-2xl bg-white/[0.04]" aria-hidden />
+    ),
+  }
+);
+
+const LottieEmptyState = dynamic(
+  () =>
+    import("@/components/motion/lottie-empty-state").then(
+      (mod) => mod.LottieEmptyState
+    ),
+  { ssr: false }
+);
+
 type DashboardClientProps = {
   initialData: DashboardData;
 };
 
 type DashboardView =
   | "overview"
+  | "account"
   | "proxies"
   | ProxyProduct
   | "orders"
@@ -129,6 +173,9 @@ const VIEW_PARAM = "view";
 
 const VIEW_ALIASES: Record<string, WorkspaceView> = {
   overview: "overview",
+  account: "account",
+  profile: "account",
+  "my-account": "account",
   proxies: "proxies",
   "my-proxies": "proxies",
   "proxy-list": "proxies",
@@ -149,6 +196,7 @@ const VIEW_ALIASES: Record<string, WorkspaceView> = {
 
 const WORKSPACE_VIEW_SLUG: Record<WorkspaceView, string> = {
   overview: "overview",
+  account: "account",
   proxies: "my-proxies",
   orders: "my-orders",
   funds: "billing",
@@ -187,13 +235,6 @@ const SETUP_GUIDE_ITEMS: {
 
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
-
-const viewTransition = {
-  initial: { opacity: 0, x: 16 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -12 },
-  transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
-};
 
 const bentoContainer = {
   hidden: { opacity: 0 },
@@ -458,6 +499,14 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Badge
+              className={cn(
+                "hidden border sm:inline-flex",
+                tierBadgeClass(initialData.accountStats.accountTier)
+              )}
+            >
+              {initialData.accountStats.tierLabel}
+            </Badge>
             <div
               className={cn(
                 "hidden items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 sm:flex",
@@ -596,6 +645,24 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
               <motion.div className="mt-0 flex flex-col gap-0.5 lg:mt-0">
                 <button
                   type="button"
+                  onClick={() => goView("account")}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
+                    view === "account"
+                      ? "bg-white/[0.06] text-white ring-1 ring-emerald-500/25"
+                      : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  )}
+                >
+                  <UserCircle
+                    className={cn(
+                      "size-4 shrink-0",
+                      view === "account" ? "text-emerald-400" : "text-zinc-500"
+                    )}
+                  />
+                  My account
+                </button>
+                <button
+                  type="button"
                   onClick={() => goView("orders")}
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors",
@@ -717,15 +784,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
             </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={view}
-              initial={viewTransition.initial}
-              animate={viewTransition.animate}
-              exit={viewTransition.exit}
-              transition={viewTransition.transition}
-              className="space-y-6"
-            >
+          <div key={view} className="animate-in fade-in duration-200 space-y-6">
               {view === "overview" && (
                 <motion.div
                   className="space-y-12"
@@ -733,6 +792,27 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   initial="hidden"
                   animate="show"
                 >
+                  <motion.section variants={bentoItem} className="space-y-5">
+                    <AccountOverview
+                      email={initialData.email}
+                      stats={initialData.accountStats}
+                      walletBalance={balance}
+                      variant="compact"
+                      onNavigate={(target) => goView(target)}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-white/12"
+                        onClick={() => goView("account")}
+                      >
+                        Full account report
+                      </Button>
+                    </div>
+                  </motion.section>
+
                   {/* Section A — Live products */}
                   <motion.section variants={bentoItem} className="space-y-5">
                     <div>
@@ -848,6 +928,16 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                 </motion.div>
               )}
 
+              {view === "account" && (
+                <AccountOverview
+                  email={initialData.email}
+                  stats={initialData.accountStats}
+                  walletBalance={balance}
+                  variant="full"
+                  onNavigate={(target) => goView(target)}
+                />
+              )}
+
               {isProductDashboardView(view) && (
                 <ProductPurchasePage
                   productId={view}
@@ -877,17 +967,11 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     </CardHeader>
                     <CardContent className="p-0 sm:px-6">
                       {initialData.orders.length === 0 ? (
-                        <p className="px-6 pb-6 text-center text-sm text-zinc-500">
-                          No orders yet.{" "}
-                          <button
-                            type="button"
-                            className="text-emerald-400 underline-offset-2 hover:underline"
-                            onClick={() => goBuyProduct("residential")}
-                          >
-                            Buy proxies
-                          </button>{" "}
-                          to get started.
-                        </p>
+                        <LottieEmptyState
+                          title="No orders yet"
+                          description="Purchase your first proxy package and track fulfillment here."
+                          className="pb-6"
+                        />
                       ) : (
                         <ScrollArea className="max-h-[520px]">
                           <Table>
@@ -904,11 +988,6 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                             <TableBody>
                               {initialData.orders.map((order) => {
                                 const product = getProduct(order.proxy_type);
-                                const extras = describeOrderExtras(
-                                  order.proxy_type,
-                                  order.tier_id,
-                                  order.addon_ids
-                                );
                                 return (
                                   <TableRow
                                     key={order.id}
@@ -922,9 +1001,11 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                                     </TableCell>
                                     <TableCell className="text-sm text-zinc-200">
                                       <span>{formatProductTypeLabel(order.proxy_type)}</span>
-                                      {extras ? (
-                                        <p className="mt-1 text-xs text-zinc-500">{extras}</p>
-                                      ) : null}
+                                      <OrderExtrasText
+                                        proxyType={order.proxy_type}
+                                        tierId={order.tier_id}
+                                        addonIds={order.addon_ids}
+                                      />
                                     </TableCell>
                                     <TableCell className="text-sm text-zinc-300">
                                       {product
@@ -998,26 +1079,22 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                     </CardHeader>
                     <CardContent className="p-0 sm:p-6 sm:pt-0">
                       {activeProxies === 0 ? (
-                        <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-                          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                            <Server className="size-7 text-zinc-500" aria-hidden />
+                        <div className="px-6 py-6">
+                          <LottieEmptyState
+                            title="No active proxies found"
+                            description="Deposit crypto and place an order. Operators deliver lines here after fulfillment."
+                            size={140}
+                          />
+                          <div className="flex justify-center pb-8">
+                            <Button
+                              className="gap-2 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300"
+                              size="sm"
+                              onClick={() => goView("funds")}
+                            >
+                              <Wallet className="size-3.5" />
+                              Add funds &amp; order
+                            </Button>
                           </div>
-                          <p className="font-heading text-lg font-semibold text-white">
-                            No active proxies found
-                          </p>
-                          <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-                            Deposit crypto to order your first node. Once treasury confirms
-                            payment, our operators provision wholesale capacity (Vultr,
-                            ISP partners) directly into this table.
-                          </p>
-                          <Button
-                            className="mt-6 gap-2 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300"
-                            size="sm"
-                            onClick={() => goView("funds")}
-                          >
-                            <Wallet className="size-3.5" />
-                            Add funds &amp; order
-                          </Button>
                         </div>
                       ) : (
                         <ScrollArea className="max-h-[min(560px,70vh)] w-full">
@@ -1404,8 +1481,7 @@ data = r.json()`}
                   </div>
                 </div>
               )}
-            </motion.div>
-          </AnimatePresence>
+          </div>
         </main>
       </div>
     </div>

@@ -1,14 +1,20 @@
 import Link from "next/link";
+import nextDynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { Network } from "lucide-react";
 
-import { AdminPanel } from "@/components/admin/admin-panel";
+import { AdminLoading } from "@/components/admin/admin-loading";
 import { Button } from "@/components/ui/button";
 import { fetchPendingDeposits, fetchRegisteredAccounts } from "@/lib/admin-data";
 import { isAdminEmail } from "@/lib/admin";
 import type { PendingOrder } from "@/lib/types/admin";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/utils/supabase/service";
+
+const AdminPanel = nextDynamic(
+  () => import("@/components/admin/admin-panel").then((mod) => mod.AdminPanel),
+  { loading: () => <AdminLoading /> }
+);
 
 export const dynamic = "force-dynamic";
 

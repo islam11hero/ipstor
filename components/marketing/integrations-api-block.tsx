@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,7 @@ export function IntegrationsApiBlock() {
       id="integrations"
       className="mx-auto max-w-7xl px-6 py-20 lg:py-28"
     >
+      <ScrollReveal>
       <div className="max-w-2xl">
         <p className="font-heading text-[11px] font-medium tracking-[0.28em] text-cyan-500/90 uppercase">
           Developer experience
@@ -62,8 +64,9 @@ export function IntegrationsApiBlock() {
           orchestration stacks—then wire everything through one consistent API.
         </p>
       </div>
+      </ScrollReveal>
 
-      <div className="mt-14 grid gap-8 lg:grid-cols-2 lg:gap-10">
+      <ScrollReveal className="mt-14 grid gap-8 lg:grid-cols-2 lg:gap-10" stagger={0.1}>
         <div className={cn(glass, "p-6 sm:p-8")}>
           <h3 className="font-heading text-lg font-semibold text-white">
             Integrations
@@ -135,7 +138,7 @@ export function IntegrationsApiBlock() {
             </code>
           </pre>
         </div>
-      </div>
+      </ScrollReveal>
     </section>
   );
 }

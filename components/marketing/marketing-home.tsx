@@ -22,6 +22,11 @@ import { HeroNetworkVisual } from "@/components/marketing/hero-network-visual";
 import { IntegrationsApiBlock } from "@/components/marketing/integrations-api-block";
 import { MarqueeTrust } from "@/components/marketing/marquee-trust";
 import { MarketingNavbar } from "@/components/marketing/marketing-navbar";
+import { AnimatedShinyText } from "@/components/motion/animated-shiny-text";
+import { AuroraBackground } from "@/components/motion/aurora-background";
+import { MagicCard } from "@/components/motion/magic-card";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { Spotlight } from "@/components/motion/spotlight";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -100,23 +105,17 @@ const reviews = [
 export function MarketingHome() {
   return (
     <div className="relative min-h-screen bg-[#050505] text-zinc-100">
+      <AuroraBackground />
       <div
         className="pointer-events-none fixed inset-0 -z-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none fixed -left-1/4 top-0 -z-10 h-[min(80vw,720px)] w-[min(80vw,720px)] rounded-full bg-emerald-500/20 blur-[150px]"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none fixed -right-1/4 bottom-0 -z-10 h-[min(70vw,640px)] w-[min(70vw,640px)] rounded-full bg-cyan-500/20 blur-[150px]"
         aria-hidden
       />
 
       <MarketingNavbar />
 
       <main>
-        <section className="mx-auto max-w-7xl px-6 pb-16 pt-16 lg:pb-24 lg:pt-24">
+        <section className="relative mx-auto max-w-7xl px-6 pb-16 pt-16 lg:pb-24 lg:pt-24">
+          <Spotlight className="-z-10" />
           <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-20">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -128,9 +127,7 @@ export function MarketingHome() {
               </p>
               <h1 className="mt-5 font-heading text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
                 Proxy fabric built for{" "}
-                <span className="bg-gradient-to-r from-emerald-200 via-white to-cyan-200 bg-clip-text text-transparent">
-                  serious workloads
-                </span>
+                <AnimatedShinyText>serious workloads</AnimatedShinyText>
               </h1>
               <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-zinc-500">
                 IP Nova unifies{" "}
@@ -188,7 +185,8 @@ export function MarketingHome() {
           className="border-t border-white/[0.05] bg-gradient-to-b from-black/40 to-transparent py-20 lg:py-28"
         >
           <div className="mx-auto max-w-7xl px-6">
-            <div className="max-w-2xl">
+            <ScrollReveal>
+              <div className="max-w-2xl">
               <p className="font-heading text-[11px] font-medium tracking-[0.28em] text-emerald-500/90 uppercase">
                 Product matrix
               </p>
@@ -200,44 +198,54 @@ export function MarketingHome() {
                 same control plane, auth formats, and enterprise support posture.
               </p>
             </div>
+            </ScrollReveal>
 
-            <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <ScrollReveal className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-4" stagger={0.08}>
               {solutionProducts.map((p) => {
                 const Icon = p.icon;
                 return (
-                  <Link key={p.title} href={p.href} className={cn(glassProduct, "block")}>
-                    <Badge className="w-fit border-none bg-emerald-500/10 text-emerald-400">
-                      {p.price}
-                    </Badge>
-                    <div className="mt-5 flex items-start justify-between gap-3">
-                      <p className="text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
-                        {p.stat}
-                      </p>
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition-colors group-hover:border-emerald-500/30 group-hover:bg-emerald-500/10">
-                        <Icon className="size-5 text-emerald-400/90" aria-hidden />
+                  <MagicCard key={p.title}>
+                    <Link
+                      href={p.href}
+                      className={cn(
+                        glassProduct,
+                        "block h-full border-0 bg-transparent shadow-none hover:bg-white/[0.035]"
+                      )}
+                    >
+                      <Badge className="w-fit border-none bg-emerald-500/10 text-emerald-400">
+                        {p.price}
+                      </Badge>
+                      <div className="mt-5 flex items-start justify-between gap-3">
+                        <p className="text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+                          {p.stat}
+                        </p>
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition-colors group-hover:border-emerald-500/30 group-hover:bg-emerald-500/10">
+                          <Icon className="size-5 text-emerald-400/90" aria-hidden />
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="mt-4 font-heading text-xl font-semibold text-white">
-                      {p.title}
-                    </h3>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-500">
-                      {p.description}
-                    </p>
-                    <span className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400/90 transition-colors group-hover:text-emerald-300">
-                      Explore
-                      <ArrowUpRight className="size-3.5" />
-                    </span>
-                  </Link>
+                      <h3 className="mt-4 font-heading text-xl font-semibold text-white">
+                        {p.title}
+                      </h3>
+                      <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-500">
+                        {p.description}
+                      </p>
+                      <span className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400/90 transition-colors group-hover:text-emerald-300">
+                        Explore
+                        <ArrowUpRight className="size-3.5" />
+                      </span>
+                    </Link>
+                  </MagicCard>
                 );
               })}
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
         <IntegrationsApiBlock />
 
         <section id="use-cases" className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
-          <div className="max-w-2xl">
+          <ScrollReveal>
+            <div className="max-w-2xl">
             <h2 className="font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               One platform. Asymmetric by design.
             </h2>
@@ -246,8 +254,9 @@ export function MarketingHome() {
               compliance there, and a spine of shared controls in between.
             </p>
           </div>
+          </ScrollReveal>
 
-          <div className="mt-14 grid auto-rows-[minmax(140px,auto)] grid-cols-6 gap-4 lg:grid-cols-12 lg:gap-5">
+          <ScrollReveal className="mt-14 grid auto-rows-[minmax(140px,auto)] grid-cols-6 gap-4 lg:grid-cols-12 lg:gap-5" stagger={0.06}>
             <div
               className={cn(
                 surface,
@@ -327,7 +336,7 @@ export function MarketingHome() {
                 host:port:user:pass
               </div>
             </div>
-          </div>
+          </ScrollReveal>
         </section>
 
         <section id="pricing" className="border-t border-white/[0.05] bg-black/30 py-24 lg:py-32">
@@ -351,8 +360,9 @@ export function MarketingHome() {
               </Link>
             </div>
 
-            <div className="mt-14 grid gap-5 lg:grid-cols-2">
-              <div className={cn(surface, "relative overflow-hidden p-8 lg:p-10")}>
+            <ScrollReveal className="mt-14 grid gap-5 lg:grid-cols-2" stagger={0.12}>
+              <MagicCard>
+              <div className={cn(surface, "relative h-full overflow-hidden border-0 bg-transparent p-8 shadow-none lg:p-10")}>
                 <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
                 <div className="relative">
                   <p className="font-heading text-[10px] tracking-[0.22em] text-zinc-500 uppercase">
@@ -383,8 +393,10 @@ export function MarketingHome() {
                   </Button>
                 </div>
               </div>
+              </MagicCard>
 
-              <div className={cn(surface, "relative overflow-hidden p-8 lg:p-10")}>
+              <MagicCard>
+              <div className={cn(surface, "relative h-full overflow-hidden border-0 bg-transparent p-8 shadow-none lg:p-10")}>
                 <div className="absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-cyan-500/10 blur-3xl" />
                 <div className="relative">
                   <p className="font-heading text-[10px] tracking-[0.22em] text-zinc-500 uppercase">
@@ -415,11 +427,13 @@ export function MarketingHome() {
                   </Button>
                 </div>
               </div>
-            </div>
+              </MagicCard>
+            </ScrollReveal>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
+          <ScrollReveal>
           <h2 className="font-heading text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Proof from production environments
           </h2>
@@ -427,7 +441,8 @@ export function MarketingHome() {
             Names and companies are representative of the profiles we serve across
             data, growth, and security organizations.
           </p>
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+          </ScrollReveal>
+          <ScrollReveal className="mt-14 grid gap-5 md:grid-cols-3" stagger={0.1}>
             {reviews.map((r) => (
               <div key={r.name} className={cn(surface, "flex flex-col p-6 lg:p-7")}>
                 <div className="flex items-center gap-3">
@@ -451,7 +466,7 @@ export function MarketingHome() {
                 </blockquote>
               </div>
             ))}
-          </div>
+          </ScrollReveal>
         </section>
       </main>
     </div>

@@ -205,6 +205,51 @@
   animation: marquee-scroll 50s linear infinite;
 }
 
+@keyframes aurora {
+  from {
+    background-position: 50% 50%, 50% 50%;
+  }
+  to {
+    background-position: 350% 50%, 350% 50%;
+  }
+}
+
+.animate-aurora {
+  animation: aurora 60s linear infinite;
+}
+
+@keyframes shiny-text {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.animate-shiny-text {
+  animation: shiny-text 4s linear infinite;
+}
+
+@keyframes border-beam-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.animate-border-beam-spin {
+  animation: border-beam-spin linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora,
+  .animate-shiny-text,
+  .animate-border-beam-spin,
+  .animate-marquee-infinite {
+    animation: none !important;
+  }
+}
+
 .will-change-transform {
   will-change: transform;
 }

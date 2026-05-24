@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
 import { ReferralTracker } from "@/components/ReferralTracker";
-import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
+
+const Footer = dynamic(
+  () => import("@/components/Footer").then((mod) => mod.Footer),
+  { loading: () => null }
+);
 
 const inter = Inter({
   variable: "--font-inter",

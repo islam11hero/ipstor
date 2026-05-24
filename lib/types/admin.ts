@@ -1,3 +1,5 @@
+import type { UserAccountStats } from "@/lib/types/dashboard";
+
 export type PendingDeposit = {
   id: string;
   user_id: string;
@@ -35,4 +37,5 @@ export type AdminRegisteredAccount = {
   orders: AdminUserOrderSummary[];
   pending_order_count: number;
   completed_order_count: number;
+  accountStats: UserAccountStats;
 };

@@ -1,9 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
+import { SparklesCore } from "@/components/motion/sparkles-core";
 import { cn } from "@/lib/utils";
+
+const ProxyNetworkGlobe = dynamic(
+  () =>
+    import("@/components/motion/three/proxy-network-globe").then(
+      (mod) => mod.ProxyNetworkGlobe
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="absolute inset-0 animate-pulse rounded-full bg-emerald-500/5" aria-hidden />
+    ),
+  }
+);
 
 const shell =
   "rounded-2xl border border-white/[0.08] bg-zinc-950/80 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset,0_24px_80px_-24px_rgba(0,0,0,0.8)] backdrop-blur-2xl";
@@ -24,9 +39,17 @@ export function HeroNetworkVisual() {
   }, []);
 
   return (
-    <div className="relative mx-auto min-h-[380px] w-full max-w-xl lg:max-w-none">
+    <div className="relative mx-auto min-h-[420px] w-full max-w-xl lg:max-w-none">
+      <SparklesCore particleCount={56} className="opacity-70" />
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[280px] w-[280px] sm:h-[320px] sm:w-[320px]">
+        {mounted ? (
+          <ProxyNetworkGlobe className="h-full w-full opacity-90" />
+        ) : null}
+      </div>
+
       <svg
-        className="pointer-events-none absolute inset-0 h-full w-full text-emerald-500/20"
+        className="pointer-events-none absolute inset-0 h-full w-full text-emerald-500/15"
         aria-hidden
         preserveAspectRatio="none"
       >
@@ -43,32 +66,24 @@ export function HeroNetworkVisual() {
           strokeWidth="1"
           className="opacity-80"
         />
-        <path
-          d="M 520 200 Q 400 160 280 200 T 80 220"
-          fill="none"
-          stroke="url(#heroLine)"
-          strokeWidth="1"
-          strokeDasharray="4 6"
-          className="opacity-60"
-        />
       </svg>
 
       {nodes.map((n, i) => (
         <span
           key={i}
-          className="pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2"
+          className="pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2"
           style={{ left: n.x, top: n.y }}
         >
           <span
-            className="absolute inset-0 animate-ping rounded-full bg-emerald-400/40"
+            className="absolute inset-0 animate-ping rounded-full bg-emerald-400/30 motion-reduce:animate-none"
             style={{ animationDelay: `${n.delay}s` }}
           />
-          <span className="absolute inset-0 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.65)] ring-2 ring-emerald-400/30" />
+          <span className="absolute inset-0 rounded-full bg-emerald-400/80 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
         </span>
       ))}
 
       <motion.div
-        className={cn(shell, "relative z-10 mx-auto mt-6 w-full max-w-md p-0 overflow-hidden lg:mt-0")}
+        className={cn(shell, "relative z-10 mx-auto mt-48 w-full max-w-md overflow-hidden p-0 lg:mt-52")}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
@@ -149,7 +164,7 @@ function TerminalLines({ active }: { active: boolean }) {
         }}
         transition={{ duration: 0.35 }}
       >
-        <span className="inline-block h-4 w-2 animate-pulse bg-emerald-500/50 align-middle" />
+        <span className="inline-block h-4 w-2 animate-pulse bg-emerald-500/50 align-middle motion-reduce:animate-none" />
       </motion.p>
     </motion.div>
   );
