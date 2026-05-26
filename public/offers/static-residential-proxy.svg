@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <filter id="glowE" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.203 0 0 0 0 0.922 0 0 0 0 0.698 0 0 0 1 0" result="color"/>
+      <feMerge><feMergeNode in="color"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowC" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.133 0 0 0 0 0.824 0 0 0 0 0.977 0 0 0 1 0" result="color"/>
+      <feMerge><feMergeNode in="color"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glowE)">
+    <path d="M72 168 L104 132 H152 L184 168 V200 H72 Z" stroke="#34d399" stroke-width="3.5"/>
+    <rect x="116" y="152" width="24" height="32" rx="3" stroke="#22d3ee" stroke-width="3"/>
+    <path d="M128 108 L128 132" stroke="#22c55e" stroke-width="3"/>
+    <circle cx="128" cy="96" r="14" stroke="#22d3ee" stroke-width="3"/>
+    <circle cx="128" cy="96" r="5" fill="#34d399"/>
+  </g>
+  <g filter="url(#glowC)">
+    <circle cx="56" cy="96" r="5" fill="#22d3ee"/>
+    <circle cx="200" cy="96" r="5" fill="#34d399"/>
+    <path d="M56 96 C92 80, 108 72, 128 72 C148 72, 164 80, 200 96" stroke="#22d3ee" stroke-width="2.5" fill="none" opacity="0.65"/>
+    <rect x="148" y="56" width="36" height="28" rx="6" stroke="#22c55e" stroke-width="2.5" opacity="0.8"/>
+    <path d="M164 72 L164 84" stroke="#34d399" stroke-width="2"/>
+  </g>
+</svg>

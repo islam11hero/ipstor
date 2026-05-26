@@ -794,15 +794,6 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   initial="hidden"
                   animate="show"
                 >
-                  <motion.section variants={bentoItem}>
-                    <DashboardPromoBanners
-                      onNavigate={(target) => {
-                        if (target === "funds") goView("funds");
-                        else goView("overview");
-                      }}
-                    />
-                  </motion.section>
-
                   <motion.section variants={bentoItem} className="space-y-5">
                     <AccountOverview
                       email={initialData.email}
@@ -841,6 +832,7 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                         <ProductOfferCard
                           key={product.id}
                           product={product}
+                          productIcon={PRODUCT_ICONS[product.id]}
                           onOrder={goBuyProduct}
                         />
                       ))}
@@ -877,6 +869,15 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                         </div>
                       </CardContent>
                     </Card>
+                  </motion.section>
+
+                  <motion.section variants={bentoItem}>
+                    <DashboardPromoBanners
+                      onNavigate={(target) => {
+                        if (target === "funds") goView("funds");
+                        else goView("overview");
+                      }}
+                    />
                   </motion.section>
 
                   {/* Section B — Setup guides */}

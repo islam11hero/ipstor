@@ -17,6 +17,7 @@ import {
 
 import { PRODUCT_OFFER_VISUALS } from "@/lib/dashboard/product-offers";
 
+import { OfferArtwork } from "@/components/ui/offer-artwork";
 import { HeroNetworkVisual } from "@/components/marketing/hero-network-visual";
 import { IntegrationsApiBlock } from "@/components/marketing/integrations-api-block";
 import { MarqueeTrust } from "@/components/marketing/marquee-trust";
@@ -211,23 +212,13 @@ export function MarketingHome() {
                 const visual = PRODUCT_OFFER_VISUALS[p.productId];
                 return (
                   <MagicCard key={p.title}>
-                    <Link
-                      href={p.href}
-                      className={cn(
-                        glassProduct,
-                        "block h-full border-0 bg-transparent p-0 shadow-none hover:bg-white/[0.035]"
-                      )}
-                    >
-                      <div className="relative aspect-[5/4] w-full overflow-hidden bg-[radial-gradient(ellipse_80%_60%_at_50%_15%,rgba(16,185,129,0.14),transparent)]">
-                        <Image
-                          src={visual.image}
-                          alt={p.title}
-                          fill
-                          className="object-contain p-5 transition-transform duration-500 group-hover:scale-105"
-                          sizes="(max-width: 640px) 100vw, 25vw"
-                        />
-                      </div>
-                      <div className="px-6 pb-6 sm:px-7 sm:pb-7">
+                    <Link href={p.href} className={cn(glassProduct, "block h-full")}>
+                      <OfferArtwork
+                        src={visual.artwork}
+                        alt=""
+                        size={56}
+                        className="absolute top-5 right-5 border-0 bg-transparent opacity-70 transition-opacity group-hover:opacity-100"
+                      />
                       <Badge className="w-fit border-none bg-emerald-500/10 text-emerald-400">
                         {p.price}
                       </Badge>
@@ -244,7 +235,6 @@ export function MarketingHome() {
                         Explore
                         <ArrowUpRight className="size-4.5" />
                       </span>
-                      </div>
                     </Link>
                   </MagicCard>
                 );

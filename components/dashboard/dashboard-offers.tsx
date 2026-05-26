@@ -1,12 +1,14 @@
 "use client";
 
-import Image from "next/image";
+import type { Icon } from "@phosphor-icons/react";
+import { Lightning, SquaresFour } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 
+import { OfferArtwork } from "@/components/ui/offer-artwork";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  DASHBOARD_PROMO_BANNERS,
+  DASHBOARD_PROMO_STRIPS,
   PRODUCT_OFFER_VISUALS,
 } from "@/lib/dashboard/product-offers";
 import type { ProxyProduct } from "@/lib/pricing";
@@ -19,120 +21,120 @@ import { hoverLift, tapScale } from "@/lib/motion";
 const shellGlass =
   "rounded-2xl border border-white/[0.05] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl";
 
+const PROMO_ICONS: Record<string, Icon> = {
+  topup: Lightning,
+  catalog: SquaresFour,
+};
+
 type DashboardPromoBannersProps = {
   onNavigate: (view: "funds" | "overview") => void;
 };
 
+/** Compact text-first promo row — no full-bleed raster banners. */
 export function DashboardPromoBanners({ onNavigate }: DashboardPromoBannersProps) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      {DASHBOARD_PROMO_BANNERS.map((banner, index) => (
-        <motion.article
-          key={banner.id}
-          className={cn(
-            shellGlass,
-            "group relative overflow-hidden p-0 transition-colors hover:border-emerald-500/25"
-          )}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.06, duration: 0.35 }}
-        >
-          <div className="relative aspect-[16/7] w-full overflow-hidden">
-            <Image
-              src={banner.image}
-              alt=""
-              fill
-              className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              priority={index === 0}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/55 to-transparent" />
-          </div>
-          <div className="relative -mt-2 space-y-3 px-5 pb-5 sm:px-6 sm:pb-6">
-            <div>
-              <h3 className="font-heading text-lg font-semibold text-white sm:text-xl">
-                {banner.title}
-              </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
-                {banner.description}
-              </p>
+    <div className="grid gap-3 sm:grid-cols-2">
+      {DASHBOARD_PROMO_STRIPS.map((strip, index) => {
+        const Icon = PROMO_ICONS[strip.id] ?? SquaresFour;
+        return (
+          <motion.article
+            key={strip.id}
+            className={cn(
+              shellGlass,
+              "flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5",
+              `bg-gradient-to-br ${strip.accent}`
+            )}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10">
+                <Icon className="size-5 text-emerald-400" weight="duotone" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-heading text-sm font-semibold text-white sm:text-base">
+                  {strip.title}
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500 sm:text-sm">
+                  {strip.description}
+                </p>
+              </div>
             </div>
-            <motion.div {...hoverLift} {...tapScale}>
+            <motion.div {...hoverLift} {...tapScale} className="shrink-0">
               <Button
                 type="button"
                 size="sm"
-                className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-black hover:from-emerald-300 hover:to-cyan-300"
-                onClick={() => onNavigate(banner.view)}
+                variant="outline"
+                className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 sm:w-auto"
+                onClick={() => onNavigate(strip.view)}
               >
-                {banner.cta}
+                {strip.cta}
               </Button>
             </motion.div>
-          </div>
-        </motion.article>
-      ))}
+          </motion.article>
+        );
+      })}
     </div>
   );
 }
 
 type ProductOfferCardProps = {
   product: ProductDefinition;
+  productIcon: Icon;
   onOrder: (productId: ProxyProduct) => void;
 };
 
-export function ProductOfferCard({ product, onOrder }: ProductOfferCardProps) {
+export function ProductOfferCard({
+  product,
+  productIcon: ProductIcon,
+  onOrder,
+}: ProductOfferCardProps) {
   const visual = PRODUCT_OFFER_VISUALS[product.id];
 
   return (
     <article
       className={cn(
         shellGlass,
-        "group flex flex-col overflow-hidden p-0 transition-colors hover:border-emerald-500/25 hover:bg-white/[0.03]"
+        "group relative flex flex-col gap-4 p-5 transition-colors hover:border-emerald-500/20 sm:p-6"
       )}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[radial-gradient(ellipse_80%_60%_at_50%_20%,rgba(16,185,129,0.12),transparent)]">
-        <Image
-          src={visual.image}
-          alt={product.label}
-          fill
-          className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+      <div className="flex items-start gap-4">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
+          <ProductIcon className="size-5 text-emerald-400" weight="duotone" />
+        </div>
+        <div className="min-w-0 flex-1 pr-16">
+          <p className="text-[10px] font-semibold tracking-wider text-emerald-400/90 uppercase">
+            {visual.highlight}
+          </p>
+          <h3 className="mt-0.5 font-heading text-base font-semibold text-white">
+            {product.label}
+          </h3>
+          <p className="mt-1 text-sm text-zinc-500">{visual.tagline}</p>
+        </div>
+        <OfferArtwork
+          src={visual.artwork}
+          alt=""
+          size={64}
+          className="absolute top-4 right-4 border-0 bg-transparent opacity-80 transition-opacity group-hover:opacity-100"
         />
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold tracking-wider text-emerald-400/90 uppercase">
-              {visual.highlight}
-            </p>
-            <h3 className="mt-1 font-heading text-lg font-semibold text-white">
-              {product.label}
-            </h3>
-          </div>
-          <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
-            {formatProductUnitPrice(product)}
-          </span>
-        </div>
-        <p className="text-sm leading-relaxed text-zinc-500">{visual.tagline}</p>
-        <p className="text-sm text-zinc-400">{product.description}</p>
-        <ul className="space-y-2 text-sm text-zinc-500">
-          <li className="flex items-center gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-            Wallet checkout — instant debit
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="size-1.5 shrink-0 rounded-full bg-cyan-400" />
-            Operator fulfillment after order
-          </li>
-        </ul>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-auto w-full border-emerald-500/40 bg-transparent text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-          onClick={() => onOrder(product.id)}
-        >
-          Order now
-        </Button>
+
+      <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
+        <span className="font-mono text-sm font-medium text-emerald-300">
+          {formatProductUnitPrice(product)}
+        </span>
+        <span className="text-xs text-zinc-500">Manual fulfillment</span>
       </div>
+
+      <Button
+        type="button"
+        size="sm"
+        className="w-full bg-gradient-to-r from-emerald-400/90 to-cyan-400/90 text-black hover:from-emerald-300 hover:to-cyan-300"
+        onClick={() => onOrder(product.id)}
+      >
+        Order now
+      </Button>
     </article>
   );
 }

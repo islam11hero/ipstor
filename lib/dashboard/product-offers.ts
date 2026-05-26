@@ -1,54 +1,55 @@
 import type { ProxyProduct } from "@/lib/pricing";
 
 export type ProductOfferVisual = {
-  image: string;
+  /** Transparent SVG artwork */
+  artwork: string;
   tagline: string;
   highlight: string;
 };
 
 export const PRODUCT_OFFER_VISUALS: Record<ProxyProduct, ProductOfferVisual> = {
   datacenter: {
-    image: "/offers/offer-datacenter.png",
-    tagline: "Throughput-first IPs for bulk automation",
+    artwork: "/offers/datacenter-proxy.svg",
+    tagline: "High-speed IPs for bulk automation",
     highlight: "Best for APIs & high QPS",
   },
   residential: {
-    image: "/offers/offer-residential.png",
+    artwork: "/offers/residential-proxy.svg",
     tagline: "Real ISP egress for strict targets",
     highlight: "Rotation & geo precision",
   },
   static_residential: {
-    image: "/offers/offer-static-residential.png",
+    artwork: "/offers/static-residential-proxy.svg",
     tagline: "Sticky home-user sessions",
     highlight: "Accounts & long flows",
   },
   isp: {
-    image: "/offers/offer-isp.png",
+    artwork: "/offers/isp-proxy.svg",
     tagline: "Carrier-grade dedicated ASN",
     highlight: "Ad verify & checkout",
   },
   mobile: {
-    image: "/offers/offer-mobile.png",
+    artwork: "/offers/mobile-proxy.svg",
     tagline: "4G / 5G mobile fingerprints",
     highlight: "Apps & social stacks",
   },
 };
 
-export const DASHBOARD_PROMO_BANNERS = [
+export const DASHBOARD_PROMO_STRIPS = [
   {
     id: "topup",
-    image: "/offers/promo-topup-scale.png",
-    title: "Top up. Deploy. Scale.",
-    description: "Fund your wallet with crypto, pick a proxy class, and we fulfill manually with live credentials.",
+    title: "Fund your wallet in minutes",
+    description: "Crypto checkout via NOWPayments — balance updates when payment clears.",
     cta: "Add funds",
     view: "funds" as const,
+    accent: "from-emerald-500/15 to-cyan-500/10",
   },
   {
-    id: "choose",
-    image: "/offers/promo-choose-proxy.png",
-    title: "Five proxy classes, one console",
-    description: "Datacenter speed, residential trust, ISP stability, mobile realism—priced transparently.",
-    cta: "Browse products",
+    id: "catalog",
+    title: "Pick the right proxy class",
+    description: "Five SKUs with transparent unit pricing. Orders debit instantly; we fulfill manually.",
+    cta: "View catalog",
     view: "overview" as const,
+    accent: "from-cyan-500/10 to-emerald-500/10",
   },
 ] as const;

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <filter id="glowE" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.203 0 0 0 0 0.922 0 0 0 0 0.698 0 0 0 1 0" result="color"/>
+      <feMerge><feMergeNode in="color"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowC" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.133 0 0 0 0 0.824 0 0 0 0 0.977 0 0 0 1 0" result="color"/>
+      <feMerge><feMergeNode in="color"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#glowE)">
+    <rect x="88" y="52" width="80" height="140" rx="6" stroke="#22c55e" stroke-width="4"/>
+    <rect x="100" y="68" width="20" height="16" rx="2" stroke="#22d3ee" stroke-width="2.5"/>
+    <rect x="128" y="68" width="20" height="16" rx="2" stroke="#22d3ee" stroke-width="2.5"/>
+    <path d="M88 92 H168" stroke="#34d399" stroke-width="3"/>
+    <rect x="104" y="108" width="48" height="56" rx="4" stroke="#22d3ee" stroke-width="3"/>
+  </g>
+  <g filter="url(#glowC)">
+    <circle cx="64" cy="120" r="5" fill="#22d3ee"/>
+    <circle cx="192" cy="120" r="5" fill="#34d399"/>
+    <circle cx="128" cy="40" r="5" fill="#22d3ee"/>
+    <path d="M64 120 C88 100, 108 88, 128 52" stroke="#22d3ee" stroke-width="2.5" fill="none" opacity="0.7"/>
+    <path d="M192 120 C168 100, 148 88, 128 52" stroke="#34d399" stroke-width="2.5" fill="none" opacity="0.7"/>
+    <path d="M48 168 L80 140 L176 140 L208 168" stroke="#22c55e" stroke-width="3" fill="none" opacity="0.6"/>
+  </g>
+</svg>
