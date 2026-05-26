@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <filter id="glowE" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feColorMatrix
+        type="matrix"
+        values="0 0 0 0 0.203  0 0 0 0 0.922  0 0 0 0 0.698  0 0 0 1 0"
+        result="color"
+      />
+      <feMerge>
+        <feMergeNode in="color" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="glowC" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feColorMatrix
+        type="matrix"
+        values="0 0 0 0 0.133  0 0 0 0 0.824  0 0 0 0 0.977  0 0 0 1 0"
+        result="color"
+      />
+      <feMerge>
+        <feMergeNode in="color" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- server stack -->
+  <g filter="url(#glowE)">
+    <rect x="44" y="76" width="168" height="120" rx="14" stroke="#22c55e" stroke-width="4" opacity="0.9"/>
+    <rect x="66" y="96" width="124" height="20" rx="8" stroke="#22d3ee" stroke-width="3" opacity="0.85"/>
+    <rect x="66" y="122" width="124" height="20" rx="8" stroke="#22c55e" stroke-width="3" opacity="0.85"/>
+    <rect x="66" y="148" width="124" height="20" rx="8" stroke="#22d3ee" stroke-width="3" opacity="0.85"/>
+    <!-- slots -->
+    <circle cx="82" cy="136" r="4" fill="#22d3ee" opacity="0.95"/>
+    <circle cx="102" cy="136" r="4" fill="#22c55e" opacity="0.95"/>
+    <circle cx="122" cy="136" r="4" fill="#22d3ee" opacity="0.95"/>
+    <circle cx="142" cy="136" r="4" fill="#22c55e" opacity="0.95"/>
+  </g>
+
+  <!-- nodes -->
+  <g filter="url(#glowC)">
+    <circle cx="60" cy="58" r="6" fill="#22d3ee" opacity="0.95"/>
+    <circle cx="128" cy="44" r="6" fill="#34d399" opacity="0.95"/>
+    <circle cx="196" cy="58" r="6" fill="#22d3ee" opacity="0.95"/>
+    <circle cx="44" cy="146" r="6" fill="#34d399" opacity="0.95"/>
+    <circle cx="212" cy="146" r="6" fill="#22d3ee" opacity="0.95"/>
+
+    <!-- connections -->
+    <path d="M60 58 C78 76, 104 74, 128 52" stroke="#22d3ee" stroke-width="3" opacity="0.7" fill="none"/>
+    <path d="M196 58 C172 78, 152 76, 128 52" stroke="#34d399" stroke-width="3" opacity="0.7" fill="none"/>
+    <path d="M44 146 C74 122, 106 120, 128 108" stroke="#22c55e" stroke-width="3" opacity="0.65" fill="none"/>
+    <path d="M212 146 C180 122, 150 120, 128 108" stroke="#22d3ee" stroke-width="3" opacity="0.65" fill="none"/>
+  </g>
+</svg>
+

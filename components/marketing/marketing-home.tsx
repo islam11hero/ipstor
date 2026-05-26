@@ -6,21 +6,16 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   ArrowUpRight,
-  Buildings,
   Check,
-  DeviceMobile,
   GlobeHemisphereWest,
-  HardDrives,
   Lightning,
   Pulse,
   ShareNetwork,
   ShieldCheck,
   Stack,
-  WifiHigh,
 } from "@phosphor-icons/react";
-import type { Icon } from "@phosphor-icons/react";
 
-import { MotionPhosphor } from "@/components/icons";
+import { PRODUCT_OFFER_VISUALS } from "@/lib/dashboard/product-offers";
 
 import { HeroNetworkVisual } from "@/components/marketing/hero-network-visual";
 import { IntegrationsApiBlock } from "@/components/marketing/integrations-api-block";
@@ -45,7 +40,7 @@ const solutionProducts: {
   stat: string;
   price: string;
   href: string;
-  icon: Icon;
+  productId: keyof typeof PRODUCT_OFFER_VISUALS;
   description: string;
 }[] = [
   {
@@ -53,7 +48,7 @@ const solutionProducts: {
     stat: "32M+ IPs",
     price: "from $1.76/GB",
     href: "/products/residential-proxies",
-    icon: WifiHigh,
+    productId: "residential",
     description:
       "Legitimate residential egress for rank tracking, ad verification, and high-trust scraping.",
   },
@@ -62,7 +57,7 @@ const solutionProducts: {
     stat: "Dedicated ASN",
     price: "from $2.40/IP",
     href: "/products/isp-proxies",
-    icon: Buildings,
+    productId: "isp",
     description:
       "Static sessions that behave like home users—ideal for accounts, carts, and long-lived flows.",
   },
@@ -71,7 +66,7 @@ const solutionProducts: {
     stat: "50+ regions",
     price: "from $1.50/IP",
     href: "/products/datacenter-proxies",
-    icon: HardDrives,
+    productId: "datacenter",
     description:
       "Throughput-first endpoints for bulk crawls, price intelligence, and internal tooling.",
   },
@@ -80,7 +75,7 @@ const solutionProducts: {
     stat: "4G / 5G",
     price: "from $3.20/GB",
     href: "/products/mobile-proxies",
-    icon: DeviceMobile,
+    productId: "mobile",
     description:
       "Carrier-grade mobile IPs when app integrity, device graphs, and geo fidelity matter most.",
   },
@@ -213,32 +208,32 @@ export function MarketingHome() {
 
             <ScrollReveal className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-4" stagger={0.08}>
               {solutionProducts.map((p) => {
-                const Icon = p.icon;
+                const visual = PRODUCT_OFFER_VISUALS[p.productId];
                 return (
                   <MagicCard key={p.title}>
                     <Link
                       href={p.href}
                       className={cn(
                         glassProduct,
-                        "block h-full border-0 bg-transparent shadow-none hover:bg-white/[0.035]"
+                        "block h-full border-0 bg-transparent p-0 shadow-none hover:bg-white/[0.035]"
                       )}
                     >
+                      <div className="relative aspect-[5/4] w-full overflow-hidden bg-[radial-gradient(ellipse_80%_60%_at_50%_15%,rgba(16,185,129,0.14),transparent)]">
+                        <Image
+                          src={visual.image}
+                          alt={p.title}
+                          fill
+                          className="object-contain p-5 transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, 25vw"
+                        />
+                      </div>
+                      <div className="px-6 pb-6 sm:px-7 sm:pb-7">
                       <Badge className="w-fit border-none bg-emerald-500/10 text-emerald-400">
                         {p.price}
                       </Badge>
-                      <div className="mt-5 flex items-start justify-between gap-3">
-                        <p className="text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
-                          {p.stat}
-                        </p>
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition-colors group-hover:border-emerald-500/30 group-hover:bg-emerald-500/10">
-                          <MotionPhosphor
-                          icon={Icon}
-                          size={26}
-                          className="text-emerald-400/90"
-                          aria-hidden
-                        />
-                        </div>
-                      </div>
+                      <p className="mt-4 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+                        {p.stat}
+                      </p>
                       <h3 className="mt-4 font-heading text-xl font-semibold text-white">
                         {p.title}
                       </h3>
@@ -249,6 +244,7 @@ export function MarketingHome() {
                         Explore
                         <ArrowUpRight className="size-4.5" />
                       </span>
+                      </div>
                     </Link>
                   </MagicCard>
                 );

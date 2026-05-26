@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import {
+  DashboardPromoBanners,
+  ProductOfferCard,
+} from "@/components/dashboard/dashboard-offers";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -790,6 +794,15 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                   initial="hidden"
                   animate="show"
                 >
+                  <motion.section variants={bentoItem}>
+                    <DashboardPromoBanners
+                      onNavigate={(target) => {
+                        if (target === "funds") goView("funds");
+                        else goView("overview");
+                      }}
+                    />
+                  </motion.section>
+
                   <motion.section variants={bentoItem} className="space-y-5">
                     <AccountOverview
                       email={initialData.email}
@@ -823,45 +836,14 @@ function DashboardClientInner({ initialData }: DashboardClientProps) {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {PROXY_PRODUCTS.map((product) => {
-                        const Icon = PRODUCT_ICONS[product.id];
-                        return (
-                          <div
-                            key={product.id}
-                            className="rounded-xl border border-white/5 bg-white/[0.02] p-6"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03]">
-                                <Icon className="size-5 text-emerald-400" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h3 className="font-heading text-base font-semibold text-white">
-                                  {product.label}
-                                </h3>
-                                <ul className="mt-3 space-y-2">
-                                  <li className="flex items-center gap-2 text-sm text-zinc-400">
-                                    <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                                    {formatProductUnitPrice(product)}
-                                  </li>
-                                  <li className="flex items-center gap-2 text-sm text-zinc-400">
-                                    <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                                    Manual fulfillment after order
-                                  </li>
-                                </ul>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="mt-4 w-full border-emerald-500/40 bg-transparent text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                                  onClick={() => goBuyProduct(product.id)}
-                                >
-                                  Order now
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                      {PROXY_PRODUCTS.map((product) => (
+                        <ProductOfferCard
+                          key={product.id}
+                          product={product}
+                          onOrder={goBuyProduct}
+                        />
+                      ))}
                     </div>
                     <Card className={cn(shellGlass)}>
                       <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
