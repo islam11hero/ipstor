@@ -1,4 +1,6 @@
-const DEFAULT_SITE = "https://ipnova.online";
+import { SITE_URL } from "@/lib/site-url";
+
+const DEFAULT_SITE = SITE_URL;
 
 /**
  * Base URL for NowPayments success / IPN callbacks.
